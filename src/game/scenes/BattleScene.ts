@@ -103,7 +103,8 @@ export class BattleScene extends Scene {
     private battleEnded = false;
 
     private movementMode = false;
-    private canChooseAbility = false;
+    private movementAvailable = true;
+    private canChooseAbility = true;
     private fireballTargetingMode = false;
 
     private reachableTileKeys = new Set<string>();
@@ -183,11 +184,16 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
 
         this.instructionText = this.add
-            .text(512, 132, "Clique no Cavaleiro para iniciar a movimentação", {
-                fontFamily: "Arial",
-                fontSize: "14px",
-                color: "#9d8977",
-            })
+            .text(
+                512,
+                132,
+                "Escolha uma habilidade, movimente o Cavaleiro ou passe o turno",
+                {
+                    fontFamily: "Arial",
+                    fontSize: "14px",
+                    color: "#9d8977",
+                },
+            )
             .setOrigin(0.5);
     }
 
@@ -591,8 +597,8 @@ export class BattleScene extends Scene {
             },
         );
 
-        this.setFireballButtonEnabled(false);
-        this.setShieldButtonEnabled(false);
+        this.setFireballButtonEnabled(true);
+        this.setShieldButtonEnabled(true);
         this.setPassTurnButtonEnabled(true);
     }
 
@@ -645,6 +651,16 @@ export class BattleScene extends Scene {
     }
 
     private startPlayerMovement(): void {
+        if (
+            !this.movementAvailable ||
+            this.enemyTurnInProgress ||
+            this.battleEnded
+        ) {
+            return;
+        }
+
+        this.fireballTargetingMode = false;
+        this.attackTileKeys.clear();
         this.movementMode = true;
         this.selectedTile = undefined;
 
@@ -674,24 +690,29 @@ export class BattleScene extends Scene {
         }
 
         if (this.fireballTargetingMode) {
+            if (this.isPlayerOnTile(tile)) {
+                this.cancelAbilitySelection();
+                return;
+            }
+
             this.tryCastFireballOnTile(tile);
             return;
         }
 
         if (this.isPlayerOnTile(tile)) {
-            if (this.canChooseAbility) {
+            if (this.movementMode) {
+                this.cancelPlayerMovement();
+                return;
+            }
+
+            if (!this.movementAvailable) {
                 this.coordinateText.setText(
-                    "O Cavaleiro já está pronto — escolha uma magia",
+                    "O Cavaleiro já realizou seu movimento nesta rodada",
                 );
                 return;
             }
 
-            if (!this.movementMode) {
-                this.startPlayerMovement();
-                return;
-            }
-
-            this.confirmPlayerWithoutMovement();
+            this.startPlayerMovement();
             return;
         }
 
@@ -791,6 +812,7 @@ export class BattleScene extends Scene {
     private isEnemyOnTile(tile: ArenaTile): boolean {
         return this.getEnemyAt(tile.row, tile.column) !== undefined;
     }
+
     private cancelPlayerMovement(): void {
         this.movementMode = false;
         this.reachableTileKeys.clear();
@@ -799,13 +821,13 @@ export class BattleScene extends Scene {
         this.refreshAllTiles();
 
         this.instructionText.setText(
-            "Clique no Cavaleiro para iniciar a movimentação",
+            "Movimento cancelado. Escolha uma habilidade, movimente o Cavaleiro ou passe o turno.",
         );
 
-        this.statusText.setText("Turno do Jogador — Selecione o Cavaleiro");
+        this.statusText.setText("Turno do Jogador — nenhuma ação executada");
 
         this.coordinateText.setText(
-            `Movimento cancelado — Linha: ${this.playerPosition.row + 1} | Coluna: ${this.playerPosition.column + 1}`,
+            `Posição atual — Linha: ${this.playerPosition.row + 1} | Coluna: ${this.playerPosition.column + 1}`,
         );
     }
 
@@ -865,6 +887,11 @@ export class BattleScene extends Scene {
             return;
         }
 
+        if (this.fireballTargetingMode) {
+            this.cancelAbilitySelection();
+            return;
+        }
+
         if (!this.canChooseAbility) {
             this.statusText.setText(
                 "Movimente o Cavaleiro ou permaneça na posição antes de utilizar uma magia",
@@ -872,6 +899,8 @@ export class BattleScene extends Scene {
             return;
         }
 
+        this.movementMode = false;
+        this.reachableTileKeys.clear();
         this.fireballTargetingMode = true;
         this.attackTileKeys = this.calculateAttackRange(
             this.playerPosition,
@@ -891,12 +920,17 @@ export class BattleScene extends Scene {
         });
 
         if (!availableTarget) {
+            this.fireballTargetingMode = false;
+            this.attackTileKeys.clear();
+
+            this.refreshAllTiles();
+
             this.instructionText.setText(
                 "Nenhum inimigo no alcance da Bola de Fogo.",
             );
 
             this.statusText.setText(
-                "Escolha Passar Turno para encerrar sua rodada",
+                "Você ainda pode se movimentar, usar Escudo Ígneo ou passar o turno",
             );
 
             return;
@@ -917,11 +951,15 @@ export class BattleScene extends Scene {
         }
 
         if (!this.canChooseAbility) {
-            this.statusText.setText(
-                "Movimente o Cavaleiro ou permaneça na posição antes de utilizar uma magia",
-            );
+            this.statusText.setText("Você já realizou sua ação nesta rodada");
             return;
         }
+
+        this.movementMode = false;
+        this.fireballTargetingMode = false;
+
+        this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
 
         const absorption = IGNEOUS_SHIELD.shieldAbsorption ?? 0;
 
@@ -1000,6 +1038,23 @@ export class BattleScene extends Scene {
         });
     }
 
+    private cancelAbilitySelection(): void {
+        this.fireballTargetingMode = false;
+        this.attackTileKeys.clear();
+
+        this.refreshAllTiles();
+
+        this.instructionText.setText(
+            "Ação cancelada. Escolha uma habilidade, movimente o Cavaleiro ou passe o turno.",
+        );
+
+        this.statusText.setText("Turno do Jogador — nenhuma ação executada");
+
+        this.coordinateText.setText(
+            `Posição atual — Linha: ${this.playerPosition.row + 1} | Coluna: ${this.playerPosition.column + 1}`,
+        );
+    }
+
     private removePlayerShield(): void {
         this.playerShield = 0;
 
@@ -1019,6 +1074,7 @@ export class BattleScene extends Scene {
         }
 
         this.movementMode = false;
+        this.movementAvailable = false;
         this.canChooseAbility = false;
         this.fireballTargetingMode = false;
 
@@ -1028,7 +1084,7 @@ export class BattleScene extends Scene {
         this.refreshAllTiles();
 
         this.coordinateText.setText(
-            "O Cavaleiro decidiu não realizar nenhum ataque nesta rodada",
+            "O Cavaleiro decidiu encerrar sua rodada sem realizar uma habilidade",
         );
 
         this.instructionText.setText("Turno passado. Os inimigos irão agir.");
@@ -1270,6 +1326,7 @@ export class BattleScene extends Scene {
 
     private finishPlayerTurn(): void {
         this.movementMode = false;
+        this.movementAvailable = false;
         this.canChooseAbility = false;
         this.fireballTargetingMode = false;
         this.enemyTurnInProgress = true;
@@ -1691,19 +1748,20 @@ export class BattleScene extends Scene {
 
         this.enemyTurnInProgress = false;
         this.movementMode = false;
-        this.canChooseAbility = false;
+        this.movementAvailable = true;
+        this.canChooseAbility = true;
         this.fireballTargetingMode = false;
 
         this.reachableTileKeys.clear();
         this.attackTileKeys.clear();
 
-        this.setFireballButtonEnabled(false);
-        this.setShieldButtonEnabled(false);
+        this.setFireballButtonEnabled(true);
+        this.setShieldButtonEnabled(true);
         this.setPassTurnButtonEnabled(true);
         this.refreshAllTiles();
 
         this.instructionText.setText(
-            "Clique no Cavaleiro para iniciar a movimentação",
+            "Escolha uma habilidade, movimente o Cavaleiro ou passe o turno",
         );
 
         this.coordinateText.setText(
@@ -1748,8 +1806,11 @@ export class BattleScene extends Scene {
         });
 
         this.movementMode = false;
+        this.movementAvailable = false;
         this.canChooseAbility = true;
+
         this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
         this.selectedTile = undefined;
 
         this.setFireballButtonEnabled(true);
