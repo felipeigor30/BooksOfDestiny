@@ -31,6 +31,10 @@ interface EnemyUnit {
     marker: GameObjects.Container;
     healthBar: GameObjects.Rectangle;
     defeated: boolean;
+
+    burningRounds: number;
+    burnDamage: number;
+    burnMarker?: GameObjects.Text;
 }
 
 interface TileStyle {
@@ -452,6 +456,8 @@ export class BattleScene extends Scene {
                 marker,
                 healthBar,
                 defeated: false,
+                burningRounds: 0,
+                burnDamage: 0,
             });
         }
     }
@@ -649,16 +655,22 @@ export class BattleScene extends Scene {
         const enemy = this.getEnemyAt(tile.row, tile.column);
 
         if (enemy) {
+            const burnStatus =
+                enemy.burningRounds > 0
+                    ? ` | 🔥 Queimadura: ${enemy.burningRounds} rodada(s)`
+                    : "";
+
             this.coordinateText.setText(
-                `${enemy.name} — HP: ${enemy.currentHp}/${enemy.maxHp} — Linha: ${tile.row + 1} | Coluna: ${tile.column + 1}`,
+                `${enemy.name} — HP: ${enemy.currentHp}/${enemy.maxHp}${burnStatus}`,
             );
 
             this.statusText.setText(
-                "Casa ocupada por inimigo — ataque ainda não implementado",
+                `Linha: ${tile.row + 1} | Coluna: ${tile.column + 1}`,
             );
 
             return;
         }
+
         if (tile.type === "rock") {
             this.coordinateText.setText(
                 `Linha: ${tile.row + 1} | Coluna: ${tile.column + 1} — Rocha bloqueia o movimento`,
@@ -954,12 +966,39 @@ export class BattleScene extends Scene {
         this.instructionText.setText(`O Cavaleiro lançou ${FIREBALL.name}!`);
     }
 
-    private applyFireballDamage(enemy: EnemyUnit): void {
-        enemy.currentHp = Math.max(0, enemy.currentHp - FIREBALL.damage);
+    private damageEnemy(enemy: EnemyUnit, damage: number): void {
+        enemy.currentHp = Math.max(0, enemy.currentHp - damage);
 
         const remainingLifeRatio = enemy.currentHp / enemy.maxHp;
 
         enemy.healthBar.setScale(remainingLifeRatio, 1);
+
+        if (enemy.currentHp === 0) {
+            this.defeatEnemy(enemy);
+        }
+    }
+
+    private defeatEnemy(enemy: EnemyUnit): void {
+        enemy.defeated = true;
+        enemy.marker.setAlpha(0.3);
+
+        if (enemy.burnMarker) {
+            enemy.burnMarker.destroy();
+            enemy.burnMarker = undefined;
+        }
+
+        enemy.burningRounds = 0;
+        enemy.burnDamage = 0;
+
+        this.refreshAllTiles();
+    }
+
+    private areAllEnemiesDefeated(): boolean {
+        return this.enemies.every((enemy) => enemy.defeated);
+    }
+
+    private applyFireballDamage(enemy: EnemyUnit): void {
+        this.damageEnemy(enemy, FIREBALL.damage);
 
         this.concentration = Math.min(
             100,
@@ -970,12 +1009,25 @@ export class BattleScene extends Scene {
             `Concentração: ${this.concentration} / 100`,
         );
 
-        if (enemy.currentHp === 0) {
-            enemy.defeated = true;
-            enemy.marker.setAlpha(0.3);
-
+        if (enemy.defeated) {
             this.coordinateText.setText(
                 `${enemy.name} foi derrotado por ${FIREBALL.name}!`,
+            );
+
+            if (this.areAllEnemiesDefeated()) {
+                this.finishBattle(true);
+                return;
+            }
+
+            this.finishPlayerTurn();
+            return;
+        }
+
+        const burnApplied = this.tryApplyBurn(enemy);
+
+        if (burnApplied) {
+            this.coordinateText.setText(
+                `${FIREBALL.name} causou ${FIREBALL.damage} de dano e aplicou Queimadura — ${enemy.name}: ${enemy.currentHp}/${enemy.maxHp} HP`,
             );
         } else {
             this.coordinateText.setText(
@@ -983,14 +1035,34 @@ export class BattleScene extends Scene {
             );
         }
 
-        this.refreshAllTiles();
+        this.finishPlayerTurn();
+    }
 
-        if (this.enemies.every((currentEnemy) => currentEnemy.defeated)) {
-            this.finishBattle(true);
-            return;
+    private tryApplyBurn(enemy: EnemyUnit): boolean {
+        const burnChance = FIREBALL.burnChance ?? 0;
+        const burnDamage = FIREBALL.burnDamage ?? 0;
+        const burnDuration = FIREBALL.burnDuration ?? 0;
+
+        const burnRoll = Math.random();
+
+        if (burnRoll > burnChance) {
+            return false;
         }
 
-        this.finishPlayerTurn();
+        enemy.burningRounds = burnDuration;
+        enemy.burnDamage = burnDamage;
+
+        if (!enemy.burnMarker) {
+            enemy.burnMarker = this.add
+                .text(22, -24, "🔥", {
+                    fontSize: "16px",
+                })
+                .setOrigin(0.5);
+
+            enemy.marker.add(enemy.burnMarker);
+        }
+
+        return true;
     }
 
     private finishBattle(playerWon: boolean): void {
@@ -1073,6 +1145,32 @@ export class BattleScene extends Scene {
 
         const enemy = activeEnemies[index];
 
+        if (enemy.defeated) {
+            this.executeEnemyAction(activeEnemies, index + 1);
+            return;
+        }
+
+        this.applyBurnAtStartOfEnemyTurn(enemy, () => {
+            if (this.battleEnded) {
+                return;
+            }
+
+            if (enemy.defeated) {
+                this.time.delayedCall(350, () => {
+                    this.executeEnemyAction(activeEnemies, index + 1);
+                });
+
+                return;
+            }
+
+            this.performEnemyAction(enemy, activeEnemies, index);
+        });
+    }
+    private performEnemyAction(
+        enemy: EnemyUnit,
+        activeEnemies: EnemyUnit[],
+        index: number,
+    ): void {
         if (this.isAdjacentToPlayer(enemy.position)) {
             this.enemyAttackPlayer(enemy, () => {
                 this.time.delayedCall(350, () => {
@@ -1101,6 +1199,93 @@ export class BattleScene extends Scene {
             this.time.delayedCall(350, () => {
                 this.executeEnemyAction(activeEnemies, index + 1);
             });
+        });
+    }
+
+    private applyBurnAtStartOfEnemyTurn(
+        enemy: EnemyUnit,
+        onComplete: () => void,
+    ): void {
+        if (enemy.burningRounds <= 0 || enemy.defeated) {
+            onComplete();
+            return;
+        }
+
+        this.damageEnemy(enemy, enemy.burnDamage);
+
+        enemy.burningRounds -= 1;
+
+        const burnDamageText = this.add
+            .text(
+                enemy.marker.x,
+                enemy.marker.y - 78,
+                `-${enemy.burnDamage} 🔥`,
+                {
+                    fontFamily: "Georgia, serif",
+                    fontSize: "16px",
+                    fontStyle: "bold",
+                    color: "#ff8533",
+                    stroke: "#34120d",
+                    strokeThickness: 3,
+                },
+            )
+            .setOrigin(0.5)
+            .setDepth(2000);
+
+        this.tweens.add({
+            targets: burnDamageText,
+            y: burnDamageText.y - 24,
+            alpha: 0,
+            duration: 620,
+            ease: "Power2",
+            onComplete: () => {
+                burnDamageText.destroy();
+            },
+        });
+
+        if (enemy.defeated) {
+            this.coordinateText.setText(
+                `${enemy.name} sofreu ${enemy.burnDamage} de dano de Queimadura e foi derrotado!`,
+            );
+
+            this.statusText.setText(`${enemy.name} foi consumido pelas chamas`);
+
+            if (this.areAllEnemiesDefeated()) {
+                this.time.delayedCall(650, () => {
+                    this.finishBattle(true);
+                });
+
+                return;
+            }
+
+            this.time.delayedCall(650, () => {
+                onComplete();
+            });
+
+            return;
+        }
+
+        if (enemy.burningRounds === 0) {
+            if (enemy.burnMarker) {
+                enemy.burnMarker.destroy();
+                enemy.burnMarker = undefined;
+            }
+
+            this.coordinateText.setText(
+                `${enemy.name} sofreu ${enemy.burnDamage} de dano de Queimadura — efeito encerrado`,
+            );
+        } else {
+            this.coordinateText.setText(
+                `${enemy.name} sofreu ${enemy.burnDamage} de dano de Queimadura — ${enemy.burningRounds} rodada(s) restante(s)`,
+            );
+        }
+
+        this.statusText.setText(
+            `Queimadura atingiu ${enemy.name}: ${enemy.currentHp}/${enemy.maxHp} HP`,
+        );
+
+        this.time.delayedCall(650, () => {
+            onComplete();
         });
     }
 
