@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
-import { FIREBALL } from "../data/abilities";
+import { FIREBALL, IGNEOUS_SHIELD } from "../data/abilities";
 import {
     GridPosition,
     INITIAL_ENEMIES,
@@ -90,6 +90,10 @@ export class BattleScene extends Scene {
     private playerHealthBar!: GameObjects.Rectangle;
     private playerHpText!: GameObjects.Text;
 
+    private playerShield = 0;
+    private playerShieldText!: GameObjects.Text;
+    private playerShieldAura?: GameObjects.Arc;
+
     private enemies: EnemyUnit[] = [];
 
     private round = 1;
@@ -115,6 +119,9 @@ export class BattleScene extends Scene {
 
     private fireballButtonBackground!: GameObjects.Rectangle;
     private fireballButtonLabel!: GameObjects.Text;
+
+    private shieldButtonBackground!: GameObjects.Rectangle;
+    private shieldButtonLabel!: GameObjects.Text;
 
     private passTurnButtonBackground!: GameObjects.Rectangle;
     private passTurnButtonLabel!: GameObjects.Text;
@@ -211,6 +218,19 @@ export class BattleScene extends Scene {
                 color: "#e5c79b",
             },
         );
+
+        this.add.text(82, 137, "ESC", {
+            fontFamily: "Georgia, serif",
+            fontSize: "12px",
+            fontStyle: "bold",
+            color: "#db9357",
+        });
+
+        this.playerShieldText = this.add.text(123, 137, "0 / 25", {
+            fontFamily: "Georgia, serif",
+            fontSize: "12px",
+            color: "#816a5b",
+        });
 
         this.roundText = this.add
             .text(932, 114, `RODADA ${this.round}`, {
@@ -485,22 +505,22 @@ export class BattleScene extends Scene {
 
     private createAbilityPanel(): void {
         this.add
-            .rectangle(835, 594, 240, 142, 0x130d0f, 1)
+            .rectangle(835, 588, 252, 186, 0x130d0f, 1)
             .setStrokeStyle(2, 0x5c3826, 1);
 
-        this.add.text(735, 536, "GRIMÓRIO", {
+        this.add.text(718, 504, "GRIMÓRIO", {
             fontFamily: "Georgia, serif",
             fontSize: "13px",
             color: "#d4a45f",
         });
 
-        // Botão Bola de Fogo
+        // Bola de Fogo
         this.fireballButtonBackground = this.add
-            .rectangle(790, 570, 122, 40, 0x22181a, 1)
+            .rectangle(782, 538, 142, 38, 0x22181a, 1)
             .setStrokeStyle(2, 0x4e352a, 1);
 
         this.fireballButtonLabel = this.add
-            .text(790, 570, "🔥 Bola de Fogo", {
+            .text(782, 538, "🔥 Bola de Fogo", {
                 fontFamily: "Georgia, serif",
                 fontSize: "13px",
                 color: "#7e6c60",
@@ -508,21 +528,43 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
 
         const fireballButton = this.add
-            .container(790, 570, [])
-            .setSize(122, 40)
+            .container(782, 538, [])
+            .setSize(142, 38)
             .setInteractive({ useHandCursor: true });
 
         fireballButton.on("pointerdown", () => {
             this.selectFireball();
         });
 
-        // Botão Passar Turno
+        // Escudo Ígneo
+        this.shieldButtonBackground = this.add
+            .rectangle(782, 581, 142, 38, 0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.shieldButtonLabel = this.add
+            .text(782, 581, "🛡 Escudo Ígneo", {
+                fontFamily: "Georgia, serif",
+                fontSize: "13px",
+                color: "#7e6c60",
+            })
+            .setOrigin(0.5);
+
+        const shieldButton = this.add
+            .container(782, 581, [])
+            .setSize(142, 38)
+            .setInteractive({ useHandCursor: true });
+
+        shieldButton.on("pointerdown", () => {
+            this.castIgneousShield();
+        });
+
+        // Passar Turno
         this.passTurnButtonBackground = this.add
-            .rectangle(790, 614, 122, 36, 0x302119, 1)
+            .rectangle(782, 624, 142, 34, 0x302119, 1)
             .setStrokeStyle(2, 0x8c5b31, 1);
 
         this.passTurnButtonLabel = this.add
-            .text(790, 614, "⏭ Passar Turno", {
+            .text(782, 624, "⏭ Passar Turno", {
                 fontFamily: "Georgia, serif",
                 fontSize: "12px",
                 color: "#e5bd78",
@@ -530,8 +572,8 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
 
         const passTurnButton = this.add
-            .container(790, 614, [])
-            .setSize(122, 36)
+            .container(782, 624, [])
+            .setSize(142, 34)
             .setInteractive({ useHandCursor: true });
 
         passTurnButton.on("pointerdown", () => {
@@ -539,8 +581,8 @@ export class BattleScene extends Scene {
         });
 
         this.concentrationText = this.add.text(
-            735,
-            646,
+            718,
+            654,
             "Concentração: 0 / 100",
             {
                 fontFamily: "Georgia, serif",
@@ -550,6 +592,7 @@ export class BattleScene extends Scene {
         );
 
         this.setFireballButtonEnabled(false);
+        this.setShieldButtonEnabled(false);
         this.setPassTurnButtonEnabled(true);
     }
 
@@ -701,6 +744,7 @@ export class BattleScene extends Scene {
         this.selectedTile = undefined;
 
         this.setFireballButtonEnabled(true);
+        this.setShieldButtonEnabled(true);
         this.refreshAllTiles();
 
         this.instructionText.setText(
@@ -782,6 +826,23 @@ export class BattleScene extends Scene {
         this.fireballButtonLabel.setColor("#7e6c60");
     }
 
+    private setShieldButtonEnabled(enabled: boolean): void {
+        if (enabled) {
+            this.shieldButtonBackground
+                .setFillStyle(0x4b2918, 1)
+                .setStrokeStyle(2, 0xdc8732, 1);
+
+            this.shieldButtonLabel.setColor("#ffd493");
+            return;
+        }
+
+        this.shieldButtonBackground
+            .setFillStyle(0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.shieldButtonLabel.setColor("#7e6c60");
+    }
+
     private setPassTurnButtonEnabled(enabled: boolean): void {
         if (enabled) {
             this.passTurnButtonBackground
@@ -846,8 +907,110 @@ export class BattleScene extends Scene {
         );
 
         this.statusText.setText(
-            `${FIREBALL.name} — Alcance: ${FIREBALL.range} casas | Dano: ${FIREBALL.damage}`,
+            `${FIREBALL.name} — Alcance: ${FIREBALL.range} casas | Dano: ${FIREBALL.damage ?? 0}`,
         );
+    }
+
+    private castIgneousShield(): void {
+        if (this.enemyTurnInProgress || this.battleEnded) {
+            return;
+        }
+
+        if (!this.canChooseAbility) {
+            this.statusText.setText(
+                "Movimente o Cavaleiro ou permaneça na posição antes de utilizar uma magia",
+            );
+            return;
+        }
+
+        const absorption = IGNEOUS_SHIELD.shieldAbsorption ?? 0;
+
+        this.fireballTargetingMode = false;
+        this.attackTileKeys.clear();
+
+        this.playerShield = absorption;
+
+        this.playerShieldText
+            .setText(`${this.playerShield} / ${absorption}`)
+            .setColor("#f0bb66");
+
+        this.concentration = Math.min(
+            100,
+            this.concentration + IGNEOUS_SHIELD.concentrationGain,
+        );
+
+        this.concentrationText.setText(
+            `Concentração: ${this.concentration} / 100`,
+        );
+
+        this.createPlayerShieldAura();
+
+        this.refreshAllTiles();
+
+        this.coordinateText.setText(
+            `${IGNEOUS_SHIELD.name} ativado — ${this.playerShield} pontos de proteção`,
+        );
+
+        this.instructionText.setText(
+            "Uma barreira flamejante envolve o Cavaleiro!",
+        );
+
+        this.statusText.setText(
+            `${IGNEOUS_SHIELD.name} — absorção: ${this.playerShield}`,
+        );
+
+        this.time.delayedCall(450, () => {
+            this.finishPlayerTurn();
+        });
+    }
+
+    private createPlayerShieldAura(): void {
+        if (!this.playerMarker) {
+            return;
+        }
+
+        if (this.playerShieldAura) {
+            this.playerShieldAura.destroy();
+        }
+
+        this.playerShieldAura = this.add
+            .circle(
+                this.playerMarker.x,
+                this.playerMarker.y - 23,
+                29,
+                0xf57c20,
+                0.12,
+            )
+            .setStrokeStyle(3, 0xffa43c, 0.9)
+            .setDepth(this.playerMarker.depth + 1);
+
+        this.tweens.add({
+            targets: this.playerShieldAura,
+            alpha: {
+                from: 0.55,
+                to: 1,
+            },
+            scale: {
+                from: 0.95,
+                to: 1.08,
+            },
+            duration: 540,
+            yoyo: true,
+            repeat: -1,
+        });
+    }
+
+    private removePlayerShield(): void {
+        this.playerShield = 0;
+
+        this.playerShieldText
+            .setText(`0 / ${IGNEOUS_SHIELD.shieldAbsorption ?? 0}`)
+            .setColor("#816a5b");
+
+        if (this.playerShieldAura) {
+            this.playerShieldAura.destroy();
+            this.playerShieldAura = undefined;
+        }
     }
 
     private passPlayerTurn(): void {
@@ -998,7 +1161,9 @@ export class BattleScene extends Scene {
     }
 
     private applyFireballDamage(enemy: EnemyUnit): void {
-        this.damageEnemy(enemy, FIREBALL.damage);
+        const damage = FIREBALL.damage ?? 0;
+
+        this.damageEnemy(enemy, damage);
 
         this.concentration = Math.min(
             100,
@@ -1027,11 +1192,11 @@ export class BattleScene extends Scene {
 
         if (burnApplied) {
             this.coordinateText.setText(
-                `${FIREBALL.name} causou ${FIREBALL.damage} de dano e aplicou Queimadura — ${enemy.name}: ${enemy.currentHp}/${enemy.maxHp} HP`,
+                `${FIREBALL.name} causou ${damage} de dano e aplicou Queimadura — ${enemy.name}: ${enemy.currentHp}/${enemy.maxHp} HP`,
             );
         } else {
             this.coordinateText.setText(
-                `${FIREBALL.name} causou ${FIREBALL.damage} de dano — ${enemy.name}: ${enemy.currentHp}/${enemy.maxHp} HP`,
+                `${FIREBALL.name} causou ${damage} de dano — ${enemy.name}: ${enemy.currentHp}/${enemy.maxHp} HP`,
             );
         }
 
@@ -1076,6 +1241,7 @@ export class BattleScene extends Scene {
         this.attackTileKeys.clear();
 
         this.setFireballButtonEnabled(false);
+        this.setShieldButtonEnabled(false);
         this.setPassTurnButtonEnabled(false);
         this.refreshAllTiles();
 
@@ -1112,6 +1278,7 @@ export class BattleScene extends Scene {
         this.attackTileKeys.clear();
 
         this.setFireballButtonEnabled(false);
+        this.setShieldButtonEnabled(false);
         this.setPassTurnButtonEnabled(false);
         this.refreshAllTiles();
 
@@ -1431,19 +1598,52 @@ export class BattleScene extends Scene {
     }
 
     private enemyAttackPlayer(enemy: EnemyUnit, onComplete: () => void): void {
-        this.playerCurrentHp = Math.max(0, this.playerCurrentHp - enemy.damage);
+        const originalDamage = enemy.damage;
+        const absorbedDamage = Math.min(this.playerShield, originalDamage);
+        const healthDamage = originalDamage - absorbedDamage;
 
-        const remainingLifeRatio = this.playerCurrentHp / this.playerMaxHp;
+        if (absorbedDamage > 0) {
+            this.playerShield -= absorbedDamage;
 
-        this.playerHealthBar.setScale(remainingLifeRatio, 1);
+            this.playerShieldText.setText(
+                `${this.playerShield} / ${IGNEOUS_SHIELD.shieldAbsorption ?? 0}`,
+            );
 
-        this.playerHpText.setText(
-            `${this.playerCurrentHp} / ${this.playerMaxHp}`,
-        );
+            if (this.playerShield === 0) {
+                this.removePlayerShield();
 
-        this.statusText.setText(
-            `${enemy.name} atacou o Cavaleiro e causou ${enemy.damage} de dano`,
-        );
+                this.statusText.setText(
+                    `${enemy.name} quebrou o Escudo Ígneo!`,
+                );
+            } else {
+                this.statusText.setText(
+                    `Escudo Ígneo absorveu ${absorbedDamage} de dano — proteção restante: ${this.playerShield}`,
+                );
+            }
+        }
+
+        if (healthDamage > 0) {
+            this.playerCurrentHp = Math.max(
+                0,
+                this.playerCurrentHp - healthDamage,
+            );
+
+            const remainingLifeRatio = this.playerCurrentHp / this.playerMaxHp;
+
+            this.playerHealthBar.setScale(remainingLifeRatio, 1);
+
+            this.playerHpText.setText(
+                `${this.playerCurrentHp} / ${this.playerMaxHp}`,
+            );
+
+            this.statusText.setText(
+                `${enemy.name} causou ${healthDamage} de dano ao Cavaleiro`,
+            );
+        }
+
+        if (absorbedDamage === 0 && healthDamage === 0) {
+            this.statusText.setText(`${enemy.name} não causou dano`);
+        }
 
         if (this.playerMarker) {
             this.tweens.add({
@@ -1482,6 +1682,10 @@ export class BattleScene extends Scene {
             return;
         }
 
+        if (this.playerShield > 0) {
+            this.removePlayerShield();
+        }
+
         this.round += 1;
         this.roundText.setText(`RODADA ${this.round}`);
 
@@ -1494,6 +1698,7 @@ export class BattleScene extends Scene {
         this.attackTileKeys.clear();
 
         this.setFireballButtonEnabled(false);
+        this.setShieldButtonEnabled(false);
         this.setPassTurnButtonEnabled(true);
         this.refreshAllTiles();
 
@@ -1548,6 +1753,7 @@ export class BattleScene extends Scene {
         this.selectedTile = undefined;
 
         this.setFireballButtonEnabled(true);
+        this.setShieldButtonEnabled(true);
         this.refreshAllTiles();
 
         this.coordinateText.setText(
