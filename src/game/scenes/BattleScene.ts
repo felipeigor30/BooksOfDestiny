@@ -1,5 +1,6 @@
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
+import { FIREBALL } from "../data/abilities";
 import {
     GridPosition,
     INITIAL_ENEMIES,
@@ -17,6 +18,7 @@ interface ArenaTile {
     polygon: GameObjects.Polygon;
     decoration?: GameObjects.GameObject;
 }
+
 interface EnemyUnit {
     id: string;
     name: string;
@@ -25,7 +27,10 @@ interface EnemyUnit {
     currentHp: number;
     position: GridPosition;
     marker: GameObjects.Container;
+    healthBar: GameObjects.Rectangle;
+    defeated: boolean;
 }
+
 interface TileStyle {
     color: number;
     label: string;
@@ -45,6 +50,9 @@ export class BattleScene extends Scene {
     private readonly hoverColor = 0x80503a;
     private readonly selectedColor = 0xc45725;
     private readonly movementColor = 0x315b55;
+
+    private readonly attackRangeColor = 0x71302a;
+    private readonly attackTargetColor = 0xb54427;
 
     private readonly entityFootOffsetY = 6;
     private readonly rockFootOffsetY = 2;
@@ -74,11 +82,21 @@ export class BattleScene extends Scene {
     private enemies: EnemyUnit[] = [];
 
     private movementMode = false;
+    private canChooseAbility = false;
+    private fireballTargetingMode = false;
+
     private reachableTileKeys = new Set<string>();
+    private attackTileKeys = new Set<string>();
+
+    private concentration = 0;
 
     private coordinateText!: GameObjects.Text;
     private instructionText!: GameObjects.Text;
     private statusText!: GameObjects.Text;
+
+    private concentrationText!: GameObjects.Text;
+    private fireballButtonBackground!: GameObjects.Rectangle;
+    private fireballButtonLabel!: GameObjects.Text;
 
     constructor() {
         super("BattleScene");
@@ -93,6 +111,7 @@ export class BattleScene extends Scene {
         this.createPlayerMarker();
         this.createEnemies();
         this.createFooter();
+        this.createAbilityPanel();
         this.createLegend();
         this.refreshAllTiles();
 
@@ -375,6 +394,8 @@ export class BattleScene extends Scene {
                 ...initialEnemy,
                 currentHp: initialEnemy.maxHp,
                 marker,
+                healthBar,
+                defeated: false,
             });
         }
     }
@@ -400,6 +421,51 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
     }
 
+    private createAbilityPanel(): void {
+        this.add
+            .rectangle(835, 590, 240, 92, 0x130d0f, 1)
+            .setStrokeStyle(2, 0x5c3826, 1);
+
+        this.add.text(735, 561, "GRIMÓRIO", {
+            fontFamily: "Georgia, serif",
+            fontSize: "13px",
+            color: "#d4a45f",
+        });
+
+        this.fireballButtonBackground = this.add
+            .rectangle(790, 597, 122, 42, 0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.fireballButtonLabel = this.add
+            .text(790, 597, "🔥 Bola de Fogo", {
+                fontFamily: "Georgia, serif",
+                fontSize: "13px",
+                color: "#7e6c60",
+            })
+            .setOrigin(0.5);
+
+        const fireballButton = this.add
+            .container(790, 597, [])
+            .setSize(122, 42)
+            .setInteractive({ useHandCursor: true });
+
+        fireballButton.on("pointerdown", () => {
+            this.selectFireball();
+        });
+
+        this.concentrationText = this.add.text(
+            735,
+            626,
+            "Concentração: 0 / 100",
+            {
+                fontFamily: "Georgia, serif",
+                fontSize: "12px",
+                color: "#bd8560",
+            },
+        );
+
+        this.setFireballButtonEnabled(false);
+    }
     private createLegend(): void {
         const legendY = 706;
 
@@ -473,7 +539,19 @@ export class BattleScene extends Scene {
     }
 
     private handleTileClick(tile: ArenaTile): void {
+        if (this.fireballTargetingMode) {
+            this.tryCastFireballOnTile(tile);
+            return;
+        }
+
         if (this.isPlayerOnTile(tile)) {
+            if (this.canChooseAbility) {
+                this.coordinateText.setText(
+                    "O Cavaleiro já se movimentou — escolha uma magia",
+                );
+                return;
+            }
+
             if (!this.movementMode) {
                 this.startPlayerMovement();
                 return;
@@ -524,10 +602,13 @@ export class BattleScene extends Scene {
             tile.column === this.playerPosition.column
         );
     }
+
     private getEnemyAt(row: number, column: number): EnemyUnit | undefined {
         return this.enemies.find(
             (enemy) =>
-                enemy.position.row === row && enemy.position.column === column,
+                !enemy.defeated &&
+                enemy.position.row === row &&
+                enemy.position.column === column,
         );
     }
 
@@ -551,6 +632,189 @@ export class BattleScene extends Scene {
             `Movimento cancelado — Linha: ${this.playerPosition.row + 1} | Coluna: ${this.playerPosition.column + 1}`,
         );
     }
+
+    private setFireballButtonEnabled(enabled: boolean): void {
+        if (enabled) {
+            this.fireballButtonBackground
+                .setFillStyle(0x502017, 1)
+                .setStrokeStyle(2, 0xd06a2b, 1);
+
+            this.fireballButtonLabel.setColor("#ffd08a");
+            return;
+        }
+
+        this.fireballButtonBackground
+            .setFillStyle(0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.fireballButtonLabel.setColor("#7e6c60");
+    }
+
+    private selectFireball(): void {
+        if (!this.canChooseAbility) {
+            this.statusText.setText(
+                "Movimente o Cavaleiro antes de utilizar uma magia",
+            );
+            return;
+        }
+
+        this.fireballTargetingMode = true;
+        this.attackTileKeys = this.calculateAttackRange(
+            this.playerPosition,
+            FIREBALL.range,
+        );
+
+        this.refreshAllTiles();
+
+        this.instructionText.setText(
+            "Bola de Fogo selecionada — escolha um inimigo dentro do alcance",
+        );
+
+        this.statusText.setText(
+            `${FIREBALL.name} — Alcance: ${FIREBALL.range} casas | Dano: ${FIREBALL.damage}`,
+        );
+    }
+
+    private calculateAttackRange(
+        start: GridPosition,
+        range: number,
+    ): Set<string> {
+        const attackableTiles = new Set<string>();
+
+        for (let row = 0; row < this.rows; row++) {
+            for (let column = 0; column < this.columns; column++) {
+                const distance =
+                    Math.abs(start.row - row) + Math.abs(start.column - column);
+
+                if (distance === 0 || distance > range) {
+                    continue;
+                }
+
+                if (P0_ARENA_MAP[row][column] === "rock") {
+                    continue;
+                }
+
+                attackableTiles.add(this.getPositionKey(row, column));
+            }
+        }
+
+        return attackableTiles;
+    }
+
+    private isWithinAttackRange(tile: ArenaTile): boolean {
+        return this.attackTileKeys.has(
+            this.getPositionKey(tile.row, tile.column),
+        );
+    }
+
+    private tryCastFireballOnTile(tile: ArenaTile): void {
+        if (!this.isWithinAttackRange(tile)) {
+            this.coordinateText.setText(
+                `Linha: ${tile.row + 1} | Coluna: ${tile.column + 1} — Fora do alcance da Bola de Fogo`,
+            );
+            return;
+        }
+
+        const enemy = this.getEnemyAt(tile.row, tile.column);
+
+        if (!enemy) {
+            this.coordinateText.setText(
+                "Bola de Fogo precisa ser direcionada a um inimigo",
+            );
+            return;
+        }
+
+        this.castFireball(enemy);
+    }
+
+    private castFireball(enemy: EnemyUnit): void {
+        const origin = this.getTileFootPosition(
+            this.playerPosition.row,
+            this.playerPosition.column,
+        );
+
+        const destination = this.getTileFootPosition(
+            enemy.position.row,
+            enemy.position.column,
+        );
+
+        this.fireballTargetingMode = false;
+        this.attackTileKeys.clear();
+        this.refreshAllTiles();
+
+        const projectileGlow = this.add
+            .circle(origin.x, origin.y - 25, 11, 0xff4e16, 0.25)
+            .setDepth(1000);
+
+        const projectile = this.add
+            .circle(origin.x, origin.y - 25, 7, 0xffa329, 1)
+            .setStrokeStyle(2, 0xffe08b, 1)
+            .setDepth(1001);
+
+        this.tweens.add({
+            targets: [projectileGlow, projectile],
+            x: destination.x,
+            y: destination.y - 23,
+            duration: 340,
+            ease: "Power2",
+            onComplete: () => {
+                projectileGlow.destroy();
+                projectile.destroy();
+
+                this.applyFireballDamage(enemy);
+            },
+        });
+
+        this.instructionText.setText(`O Cavaleiro lançou ${FIREBALL.name}!`);
+    }
+
+    private applyFireballDamage(enemy: EnemyUnit): void {
+        enemy.currentHp = Math.max(0, enemy.currentHp - FIREBALL.damage);
+
+        const remainingLifeRatio = enemy.currentHp / enemy.maxHp;
+
+        enemy.healthBar.setScale(remainingLifeRatio, 1);
+
+        this.concentration = Math.min(
+            100,
+            this.concentration + FIREBALL.concentrationGain,
+        );
+
+        this.concentrationText.setText(
+            `Concentração: ${this.concentration} / 100`,
+        );
+
+        if (enemy.currentHp === 0) {
+            enemy.defeated = true;
+            enemy.marker.setAlpha(0.35);
+
+            this.coordinateText.setText(
+                `${enemy.name} foi derrotado por ${FIREBALL.name}!`,
+            );
+        } else {
+            this.coordinateText.setText(
+                `${FIREBALL.name} causou ${FIREBALL.damage} de dano — ${enemy.name}: ${enemy.currentHp}/${enemy.maxHp} HP`,
+            );
+        }
+
+        this.finishPlayerTurn();
+    }
+
+    private finishPlayerTurn(): void {
+        this.canChooseAbility = false;
+        this.fireballTargetingMode = false;
+        this.attackTileKeys.clear();
+
+        this.setFireballButtonEnabled(false);
+        this.refreshAllTiles();
+
+        this.instructionText.setText(
+            "Turno concluído. Na próxima etapa, os inimigos irão agir.",
+        );
+
+        this.statusText.setText("Turno do Jogador encerrado");
+    }
+
     private selectTile(tile: ArenaTile): void {
         this.selectedTile = tile;
         this.refreshAllTiles();
@@ -586,9 +850,11 @@ export class BattleScene extends Scene {
         });
 
         this.movementMode = false;
+        this.canChooseAbility = true;
         this.reachableTileKeys.clear();
         this.selectedTile = undefined;
 
+        this.setFireballButtonEnabled(true);
         this.refreshAllTiles();
 
         this.coordinateText.setText(
@@ -596,11 +862,11 @@ export class BattleScene extends Scene {
         );
 
         this.instructionText.setText(
-            "Movimento realizado. A próxima etapa será selecionar uma magia.",
+            "Movimento realizado. Selecione uma magia do Grimório.",
         );
 
         this.statusText.setText(
-            "Ação de movimento concluída — ataque ainda não implementado",
+            "Ação de movimento concluída — escolha Bola de Fogo",
         );
     }
 
@@ -697,6 +963,16 @@ export class BattleScene extends Scene {
 
         if (this.isSelected(tile)) {
             tile.polygon.setFillStyle(this.selectedColor, 1);
+            return;
+        }
+
+        if (this.isWithinAttackRange(tile)) {
+            if (this.isEnemyOnTile(tile)) {
+                tile.polygon.setFillStyle(this.attackTargetColor, 1);
+                return;
+            }
+
+            tile.polygon.setFillStyle(this.attackRangeColor, 1);
             return;
         }
 

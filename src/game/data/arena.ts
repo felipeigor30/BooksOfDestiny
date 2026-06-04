@@ -1,4 +1,4 @@
-export type TileType = 'ground' | 'corrupted' | 'rock';
+export type TileType = "ground" | "corrupted" | "rock";
 
 export interface GridPosition {
     row: number;
@@ -13,19 +13,91 @@ export interface GridPosition {
  * R = Rocha bloqueadora
  */
 export const P0_ARENA_MAP: TileType[][] = [
-    ['ground', 'ground', 'rock', 'ground', 'ground', 'corrupted', 'ground', 'ground'],
-    ['ground', 'corrupted', 'ground', 'ground', 'rock', 'ground', 'ground', 'corrupted'],
-    ['ground', 'ground', 'ground', 'corrupted', 'ground', 'ground', 'rock', 'ground'],
-    ['corrupted', 'rock', 'ground', 'ground', 'ground', 'corrupted', 'ground', 'ground'],
-    ['ground', 'ground', 'corrupted', 'rock', 'ground', 'ground', 'ground', 'corrupted'],
-    ['ground', 'rock', 'ground', 'ground', 'corrupted', 'ground', 'rock', 'ground'],
-    ['ground', 'ground', 'ground', 'corrupted', 'ground', 'ground', 'ground', 'ground'],
-    ['ground', 'corrupted', 'ground', 'ground', 'ground', 'rock', 'corrupted', 'ground']
+    [
+        "ground",
+        "ground",
+        "rock",
+        "ground",
+        "ground",
+        "corrupted",
+        "ground",
+        "ground",
+    ],
+    [
+        "ground",
+        "corrupted",
+        "ground",
+        "ground",
+        "rock",
+        "ground",
+        "ground",
+        "corrupted",
+    ],
+    [
+        "ground",
+        "ground",
+        "ground",
+        "corrupted",
+        "ground",
+        "ground",
+        "rock",
+        "ground",
+    ],
+    [
+        "corrupted",
+        "rock",
+        "ground",
+        "ground",
+        "ground",
+        "corrupted",
+        "ground",
+        "ground",
+    ],
+    [
+        "ground",
+        "ground",
+        "corrupted",
+        "rock",
+        "ground",
+        "ground",
+        "ground",
+        "corrupted",
+    ],
+    [
+        "ground",
+        "rock",
+        "ground",
+        "ground",
+        "corrupted",
+        "ground",
+        "rock",
+        "ground",
+    ],
+    [
+        "ground",
+        "ground",
+        "ground",
+        "corrupted",
+        "ground",
+        "ground",
+        "ground",
+        "ground",
+    ],
+    [
+        "ground",
+        "corrupted",
+        "ground",
+        "ground",
+        "ground",
+        "rock",
+        "corrupted",
+        "ground",
+    ],
 ];
 
 export const INITIAL_PLAYER_POSITION: GridPosition = {
     row: 6,
-    column: 1
+    column: 1,
 };
 
 export const PLAYER_MOVEMENT_RANGE = 4;
@@ -40,23 +112,23 @@ export interface InitialEnemy {
 
 export const INITIAL_ENEMIES: InitialEnemy[] = [
     {
-        id: 'wolf-1',
-        name: 'Lobo Maculado',
-        symbol: 'L',
+        id: "wolf-1",
+        name: "Lobo Maculado",
+        symbol: "L",
         maxHp: 45,
         position: {
             row: 2,
-            column: 4
-        }
+            column: 4,
+        },
     },
     {
-        id: 'wolf-2',
-        name: 'Lobo Maculado',
-        symbol: 'L',
+        id: "wolf-2",
+        name: "Lobo Maculado",
+        symbol: "L",
         maxHp: 45,
         position: {
             row: 1,
-            column: 6
-        }
-    }
+            column: 6,
+        },
+    },
 ];
