@@ -107,6 +107,8 @@ export interface InitialEnemy {
     name: string;
     symbol: string;
     maxHp: number;
+    damage: number;
+    movementRange: number;
     position: GridPosition;
 }
 
@@ -116,6 +118,8 @@ export const INITIAL_ENEMIES: InitialEnemy[] = [
         name: "Lobo Maculado",
         symbol: "L",
         maxHp: 45,
+        damage: 12,
+        movementRange: 3,
         position: {
             row: 2,
             column: 4,
@@ -126,6 +130,8 @@ export const INITIAL_ENEMIES: InitialEnemy[] = [
         name: "Lobo Maculado",
         symbol: "L",
         maxHp: 45,
+        damage: 12,
+        movementRange: 3,
         position: {
             row: 1,
             column: 6,

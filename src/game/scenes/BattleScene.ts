@@ -25,6 +25,8 @@ interface EnemyUnit {
     symbol: string;
     maxHp: number;
     currentHp: number;
+    damage: number;
+    movementRange: number;
     position: GridPosition;
     marker: GameObjects.Container;
     healthBar: GameObjects.Rectangle;
@@ -44,7 +46,7 @@ export class BattleScene extends Scene {
     private readonly tileHeight = 48;
 
     private readonly arenaOriginX = 512;
-    private readonly arenaOriginY = 170;
+    private readonly arenaOriginY = 184;
 
     private readonly tileStrokeColor = 0x6b4730;
     private readonly hoverColor = 0x80503a;
@@ -79,7 +81,18 @@ export class BattleScene extends Scene {
     private playerPosition: GridPosition = { ...INITIAL_PLAYER_POSITION };
     private playerMarker?: GameObjects.Container;
 
+    private readonly playerMaxHp = 100;
+    private playerCurrentHp = 100;
+    private playerHealthBar!: GameObjects.Rectangle;
+    private playerHpText!: GameObjects.Text;
+
     private enemies: EnemyUnit[] = [];
+
+    private round = 1;
+    private roundText!: GameObjects.Text;
+
+    private enemyTurnInProgress = false;
+    private battleEnded = false;
 
     private movementMode = false;
     private canChooseAbility = false;
@@ -95,8 +108,12 @@ export class BattleScene extends Scene {
     private statusText!: GameObjects.Text;
 
     private concentrationText!: GameObjects.Text;
+
     private fireballButtonBackground!: GameObjects.Rectangle;
     private fireballButtonLabel!: GameObjects.Text;
+
+    private passTurnButtonBackground!: GameObjects.Rectangle;
+    private passTurnButtonLabel!: GameObjects.Text;
 
     constructor() {
         super("BattleScene");
@@ -107,6 +124,7 @@ export class BattleScene extends Scene {
 
         this.createBackground();
         this.createHeader();
+        this.createCombatHud();
         this.createArena();
         this.createPlayerMarker();
         this.createEnemies();
@@ -154,12 +172,50 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
 
         this.instructionText = this.add
-            .text(512, 105, "Clique no Cavaleiro para iniciar a movimentação", {
+            .text(512, 132, "Clique no Cavaleiro para iniciar a movimentação", {
                 fontFamily: "Arial",
                 fontSize: "14px",
                 color: "#9d8977",
             })
             .setOrigin(0.5);
+    }
+
+    private createCombatHud(): void {
+        this.add.text(82, 114, "HP", {
+            fontFamily: "Georgia, serif",
+            fontSize: "13px",
+            fontStyle: "bold",
+            color: "#dfb276",
+        });
+
+        this.add
+            .rectangle(123, 121, 142, 14, 0x251619, 1)
+            .setOrigin(0, 0.5)
+            .setStrokeStyle(1, 0x71402e, 1);
+
+        this.playerHealthBar = this.add
+            .rectangle(126, 121, 136, 8, 0xb63d32, 1)
+            .setOrigin(0, 0.5);
+
+        this.playerHpText = this.add.text(
+            274,
+            114,
+            `${this.playerCurrentHp} / ${this.playerMaxHp}`,
+            {
+                fontFamily: "Georgia, serif",
+                fontSize: "13px",
+                color: "#e5c79b",
+            },
+        );
+
+        this.roundText = this.add
+            .text(932, 114, `RODADA ${this.round}`, {
+                fontFamily: "Georgia, serif",
+                fontSize: "14px",
+                fontStyle: "bold",
+                color: "#d2753e",
+            })
+            .setOrigin(1, 0);
     }
 
     private createArena(): void {
@@ -423,21 +479,22 @@ export class BattleScene extends Scene {
 
     private createAbilityPanel(): void {
         this.add
-            .rectangle(835, 590, 240, 92, 0x130d0f, 1)
+            .rectangle(835, 594, 240, 142, 0x130d0f, 1)
             .setStrokeStyle(2, 0x5c3826, 1);
 
-        this.add.text(735, 561, "GRIMÓRIO", {
+        this.add.text(735, 536, "GRIMÓRIO", {
             fontFamily: "Georgia, serif",
             fontSize: "13px",
             color: "#d4a45f",
         });
 
+        // Botão Bola de Fogo
         this.fireballButtonBackground = this.add
-            .rectangle(790, 597, 122, 42, 0x22181a, 1)
+            .rectangle(790, 570, 122, 40, 0x22181a, 1)
             .setStrokeStyle(2, 0x4e352a, 1);
 
         this.fireballButtonLabel = this.add
-            .text(790, 597, "🔥 Bola de Fogo", {
+            .text(790, 570, "🔥 Bola de Fogo", {
                 fontFamily: "Georgia, serif",
                 fontSize: "13px",
                 color: "#7e6c60",
@@ -445,17 +502,39 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
 
         const fireballButton = this.add
-            .container(790, 597, [])
-            .setSize(122, 42)
+            .container(790, 570, [])
+            .setSize(122, 40)
             .setInteractive({ useHandCursor: true });
 
         fireballButton.on("pointerdown", () => {
             this.selectFireball();
         });
 
+        // Botão Passar Turno
+        this.passTurnButtonBackground = this.add
+            .rectangle(790, 614, 122, 36, 0x302119, 1)
+            .setStrokeStyle(2, 0x8c5b31, 1);
+
+        this.passTurnButtonLabel = this.add
+            .text(790, 614, "⏭ Passar Turno", {
+                fontFamily: "Georgia, serif",
+                fontSize: "12px",
+                color: "#e5bd78",
+            })
+            .setOrigin(0.5);
+
+        const passTurnButton = this.add
+            .container(790, 614, [])
+            .setSize(122, 36)
+            .setInteractive({ useHandCursor: true });
+
+        passTurnButton.on("pointerdown", () => {
+            this.passPlayerTurn();
+        });
+
         this.concentrationText = this.add.text(
             735,
-            626,
+            646,
             "Concentração: 0 / 100",
             {
                 fontFamily: "Georgia, serif",
@@ -465,7 +544,9 @@ export class BattleScene extends Scene {
         );
 
         this.setFireballButtonEnabled(false);
+        this.setPassTurnButtonEnabled(true);
     }
+
     private createLegend(): void {
         const legendY = 706;
 
@@ -539,6 +620,10 @@ export class BattleScene extends Scene {
     }
 
     private handleTileClick(tile: ArenaTile): void {
+        if (this.enemyTurnInProgress || this.battleEnded) {
+            return;
+        }
+
         if (this.fireballTargetingMode) {
             this.tryCastFireballOnTile(tile);
             return;
@@ -547,7 +632,7 @@ export class BattleScene extends Scene {
         if (this.isPlayerOnTile(tile)) {
             if (this.canChooseAbility) {
                 this.coordinateText.setText(
-                    "O Cavaleiro já se movimentou — escolha uma magia",
+                    "O Cavaleiro já está pronto — escolha uma magia",
                 );
                 return;
             }
@@ -557,7 +642,7 @@ export class BattleScene extends Scene {
                 return;
             }
 
-            this.cancelPlayerMovement();
+            this.confirmPlayerWithoutMovement();
             return;
         }
 
@@ -596,10 +681,45 @@ export class BattleScene extends Scene {
         this.selectTile(tile);
     }
 
+    private confirmPlayerWithoutMovement(): void {
+        this.movementMode = false;
+        this.canChooseAbility = true;
+
+        this.reachableTileKeys.clear();
+        this.selectedTile = undefined;
+
+        this.setFireballButtonEnabled(true);
+        this.refreshAllTiles();
+
+        this.instructionText.setText(
+            "Posição mantida. Use uma magia ou passe o turno.",
+        );
+
+        this.coordinateText.setText(
+            `Cavaleiro aguardando na posição — Linha: ${this.playerPosition.row + 1} | Coluna: ${this.playerPosition.column + 1}`,
+        );
+
+        this.statusText.setText("Movimento não utilizado — escolha sua ação");
+    }
+
     private isPlayerOnTile(tile: ArenaTile): boolean {
         return (
             tile.row === this.playerPosition.row &&
             tile.column === this.playerPosition.column
+        );
+    }
+
+    private hasActiveEnemyAt(
+        row: number,
+        column: number,
+        ignoredEnemyId?: string,
+    ): boolean {
+        return this.enemies.some(
+            (enemy) =>
+                !enemy.defeated &&
+                enemy.id !== ignoredEnemyId &&
+                enemy.position.row === row &&
+                enemy.position.column === column,
         );
     }
 
@@ -650,10 +770,31 @@ export class BattleScene extends Scene {
         this.fireballButtonLabel.setColor("#7e6c60");
     }
 
+    private setPassTurnButtonEnabled(enabled: boolean): void {
+        if (enabled) {
+            this.passTurnButtonBackground
+                .setFillStyle(0x302119, 1)
+                .setStrokeStyle(2, 0xb67b39, 1);
+
+            this.passTurnButtonLabel.setColor("#f0ca83");
+            return;
+        }
+
+        this.passTurnButtonBackground
+            .setFillStyle(0x21181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.passTurnButtonLabel.setColor("#71655b");
+    }
+
     private selectFireball(): void {
+        if (this.enemyTurnInProgress || this.battleEnded) {
+            return;
+        }
+
         if (!this.canChooseAbility) {
             this.statusText.setText(
-                "Movimente o Cavaleiro antes de utilizar uma magia",
+                "Movimente o Cavaleiro ou permaneça na posição antes de utilizar uma magia",
             );
             return;
         }
@@ -666,6 +807,28 @@ export class BattleScene extends Scene {
 
         this.refreshAllTiles();
 
+        const availableTarget = this.enemies.some((enemy) => {
+            if (enemy.defeated) {
+                return false;
+            }
+
+            return this.attackTileKeys.has(
+                this.getPositionKey(enemy.position.row, enemy.position.column),
+            );
+        });
+
+        if (!availableTarget) {
+            this.instructionText.setText(
+                "Nenhum inimigo no alcance da Bola de Fogo.",
+            );
+
+            this.statusText.setText(
+                "Escolha Passar Turno para encerrar sua rodada",
+            );
+
+            return;
+        }
+
         this.instructionText.setText(
             "Bola de Fogo selecionada — escolha um inimigo dentro do alcance",
         );
@@ -673,6 +836,29 @@ export class BattleScene extends Scene {
         this.statusText.setText(
             `${FIREBALL.name} — Alcance: ${FIREBALL.range} casas | Dano: ${FIREBALL.damage}`,
         );
+    }
+
+    private passPlayerTurn(): void {
+        if (this.enemyTurnInProgress || this.battleEnded) {
+            return;
+        }
+
+        this.movementMode = false;
+        this.canChooseAbility = false;
+        this.fireballTargetingMode = false;
+
+        this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
+
+        this.refreshAllTiles();
+
+        this.coordinateText.setText(
+            "O Cavaleiro decidiu não realizar nenhum ataque nesta rodada",
+        );
+
+        this.instructionText.setText("Turno passado. Os inimigos irão agir.");
+
+        this.finishPlayerTurn();
     }
 
     private calculateAttackRange(
@@ -786,7 +972,7 @@ export class BattleScene extends Scene {
 
         if (enemy.currentHp === 0) {
             enemy.defeated = true;
-            enemy.marker.setAlpha(0.35);
+            enemy.marker.setAlpha(0.3);
 
             this.coordinateText.setText(
                 `${enemy.name} foi derrotado por ${FIREBALL.name}!`,
@@ -797,22 +983,344 @@ export class BattleScene extends Scene {
             );
         }
 
+        this.refreshAllTiles();
+
+        if (this.enemies.every((currentEnemy) => currentEnemy.defeated)) {
+            this.finishBattle(true);
+            return;
+        }
+
         this.finishPlayerTurn();
     }
 
-    private finishPlayerTurn(): void {
+    private finishBattle(playerWon: boolean): void {
+        this.battleEnded = true;
+        this.enemyTurnInProgress = false;
         this.canChooseAbility = false;
+        this.movementMode = false;
         this.fireballTargetingMode = false;
+
+        this.reachableTileKeys.clear();
         this.attackTileKeys.clear();
 
         this.setFireballButtonEnabled(false);
+        this.setPassTurnButtonEnabled(false);
+        this.refreshAllTiles();
+
+        if (playerWon) {
+            this.instructionText.setText(
+                "Vitória! Os Lobos Maculados foram derrotados.",
+            );
+
+            this.statusText.setText(
+                "Batalha concluída — Recompensas serão implementadas futuramente",
+            );
+
+            return;
+        }
+
+        this.instructionText.setText("Derrota! O Cavaleiro caiu em batalha.");
+
+        this.statusText.setText(
+            "Fim da batalha — recarregue a página para tentar novamente",
+        );
+
+        if (this.playerMarker) {
+            this.playerMarker.setAlpha(0.35);
+        }
+    }
+
+    private finishPlayerTurn(): void {
+        this.movementMode = false;
+        this.canChooseAbility = false;
+        this.fireballTargetingMode = false;
+        this.enemyTurnInProgress = true;
+
+        this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
+
+        this.setFireballButtonEnabled(false);
+        this.setPassTurnButtonEnabled(false);
+        this.refreshAllTiles();
+
+        this.instructionText.setText("Turno concluído. Os inimigos irão agir.");
+
+        this.statusText.setText("Turno dos Lobos Maculados");
+
+        this.time.delayedCall(650, () => {
+            this.startEnemyTurn();
+        });
+    }
+
+    private startEnemyTurn(): void {
+        const activeEnemies = this.enemies.filter((enemy) => !enemy.defeated);
+
+        this.executeEnemyAction(activeEnemies, 0);
+    }
+
+    private executeEnemyAction(
+        activeEnemies: EnemyUnit[],
+        index: number,
+    ): void {
+        if (this.battleEnded) {
+            return;
+        }
+
+        if (index >= activeEnemies.length) {
+            this.startNewPlayerTurn();
+            return;
+        }
+
+        const enemy = activeEnemies[index];
+
+        if (this.isAdjacentToPlayer(enemy.position)) {
+            this.enemyAttackPlayer(enemy, () => {
+                this.time.delayedCall(350, () => {
+                    this.executeEnemyAction(activeEnemies, index + 1);
+                });
+            });
+
+            return;
+        }
+
+        this.moveEnemyTowardPlayer(enemy, () => {
+            if (this.battleEnded) {
+                return;
+            }
+
+            if (this.isAdjacentToPlayer(enemy.position)) {
+                this.enemyAttackPlayer(enemy, () => {
+                    this.time.delayedCall(350, () => {
+                        this.executeEnemyAction(activeEnemies, index + 1);
+                    });
+                });
+
+                return;
+            }
+
+            this.time.delayedCall(350, () => {
+                this.executeEnemyAction(activeEnemies, index + 1);
+            });
+        });
+    }
+
+    private moveEnemyTowardPlayer(
+        enemy: EnemyUnit,
+        onComplete: () => void,
+    ): void {
+        const path = this.findPathToPlayer(enemy);
+
+        if (!path || path.length <= 1) {
+            onComplete();
+            return;
+        }
+
+        const maximumStepsBeforePlayer = path.length - 1;
+
+        const stepsToWalk = Math.min(
+            enemy.movementRange,
+            maximumStepsBeforePlayer,
+        );
+
+        if (stepsToWalk <= 0) {
+            onComplete();
+            return;
+        }
+
+        const destination = path[stepsToWalk - 1];
+
+        enemy.position = {
+            row: destination.row,
+            column: destination.column,
+        };
+
+        const destinationPosition = this.getTileFootPosition(
+            destination.row,
+            destination.column,
+        );
+
+        this.statusText.setText(
+            `${enemy.name} está se aproximando do Cavaleiro`,
+        );
+
+        this.tweens.add({
+            targets: enemy.marker,
+            x: destinationPosition.x,
+            y: destinationPosition.y,
+            duration: 430,
+            ease: "Power2",
+            onUpdate: () => {
+                enemy.marker.setDepth(enemy.marker.y + 50);
+            },
+            onComplete: () => {
+                this.refreshAllTiles();
+                onComplete();
+            },
+        });
+
+        this.refreshAllTiles();
+    }
+
+    private findPathToPlayer(enemy: EnemyUnit): GridPosition[] | null {
+        const start = enemy.position;
+
+        const queue: Array<{
+            position: GridPosition;
+            path: GridPosition[];
+        }> = [
+            {
+                position: start,
+                path: [],
+            },
+        ];
+
+        const visited = new Set<string>([
+            this.getPositionKey(start.row, start.column),
+        ]);
+
+        const directions: GridPosition[] = [
+            { row: -1, column: 0 },
+            { row: 1, column: 0 },
+            { row: 0, column: -1 },
+            { row: 0, column: 1 },
+        ];
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+
+            if (!current) {
+                continue;
+            }
+
+            for (const direction of directions) {
+                const nextRow = current.position.row + direction.row;
+                const nextColumn = current.position.column + direction.column;
+
+                if (!this.isWithinArena(nextRow, nextColumn)) {
+                    continue;
+                }
+
+                const nextPosition: GridPosition = {
+                    row: nextRow,
+                    column: nextColumn,
+                };
+
+                const key = this.getPositionKey(nextRow, nextColumn);
+
+                if (visited.has(key)) {
+                    continue;
+                }
+
+                if (
+                    nextRow === this.playerPosition.row &&
+                    nextColumn === this.playerPosition.column
+                ) {
+                    return [...current.path, nextPosition];
+                }
+
+                if (
+                    P0_ARENA_MAP[nextRow][nextColumn] === "rock" ||
+                    this.hasActiveEnemyAt(nextRow, nextColumn, enemy.id)
+                ) {
+                    continue;
+                }
+
+                visited.add(key);
+
+                queue.push({
+                    position: nextPosition,
+                    path: [...current.path, nextPosition],
+                });
+            }
+        }
+
+        return null;
+    }
+
+    private isAdjacentToPlayer(position: GridPosition): boolean {
+        const distance =
+            Math.abs(position.row - this.playerPosition.row) +
+            Math.abs(position.column - this.playerPosition.column);
+
+        return distance === 1;
+    }
+
+    private enemyAttackPlayer(enemy: EnemyUnit, onComplete: () => void): void {
+        this.playerCurrentHp = Math.max(0, this.playerCurrentHp - enemy.damage);
+
+        const remainingLifeRatio = this.playerCurrentHp / this.playerMaxHp;
+
+        this.playerHealthBar.setScale(remainingLifeRatio, 1);
+
+        this.playerHpText.setText(
+            `${this.playerCurrentHp} / ${this.playerMaxHp}`,
+        );
+
+        this.statusText.setText(
+            `${enemy.name} atacou o Cavaleiro e causou ${enemy.damage} de dano`,
+        );
+
+        if (this.playerMarker) {
+            this.tweens.add({
+                targets: this.playerMarker,
+                alpha: 0.35,
+                duration: 90,
+                yoyo: true,
+                repeat: 2,
+                onComplete: () => {
+                    if (this.playerMarker) {
+                        this.playerMarker.setAlpha(1);
+                    }
+
+                    if (this.playerCurrentHp === 0) {
+                        this.finishBattle(false);
+                        return;
+                    }
+
+                    onComplete();
+                },
+            });
+
+            return;
+        }
+
+        if (this.playerCurrentHp === 0) {
+            this.finishBattle(false);
+            return;
+        }
+
+        onComplete();
+    }
+
+    private startNewPlayerTurn(): void {
+        if (this.battleEnded) {
+            return;
+        }
+
+        this.round += 1;
+        this.roundText.setText(`RODADA ${this.round}`);
+
+        this.enemyTurnInProgress = false;
+        this.movementMode = false;
+        this.canChooseAbility = false;
+        this.fireballTargetingMode = false;
+
+        this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
+
+        this.setFireballButtonEnabled(false);
+        this.setPassTurnButtonEnabled(true);
         this.refreshAllTiles();
 
         this.instructionText.setText(
-            "Turno concluído. Na próxima etapa, os inimigos irão agir.",
+            "Clique no Cavaleiro para iniciar a movimentação",
         );
 
-        this.statusText.setText("Turno do Jogador encerrado");
+        this.coordinateText.setText(
+            `Nova rodada iniciada — HP do Cavaleiro: ${this.playerCurrentHp}/${this.playerMaxHp}`,
+        );
+
+        this.statusText.setText(`Rodada ${this.round} — Turno do Jogador`);
     }
 
     private selectTile(tile: ArenaTile): void {
@@ -862,11 +1370,11 @@ export class BattleScene extends Scene {
         );
 
         this.instructionText.setText(
-            "Movimento realizado. Selecione uma magia do Grimório.",
+            "Movimento realizado. Use uma magia ou passe o turno.",
         );
 
         this.statusText.setText(
-            "Ação de movimento concluída — escolha Bola de Fogo",
+            "Ação de movimento concluída — escolha sua ação",
         );
     }
 
