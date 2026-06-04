@@ -29,3 +29,34 @@ export const INITIAL_PLAYER_POSITION: GridPosition = {
 };
 
 export const PLAYER_MOVEMENT_RANGE = 4;
+
+export interface InitialEnemy {
+    id: string;
+    name: string;
+    symbol: string;
+    maxHp: number;
+    position: GridPosition;
+}
+
+export const INITIAL_ENEMIES: InitialEnemy[] = [
+    {
+        id: 'wolf-1',
+        name: 'Lobo Maculado',
+        symbol: 'L',
+        maxHp: 45,
+        position: {
+            row: 2,
+            column: 4
+        }
+    },
+    {
+        id: 'wolf-2',
+        name: 'Lobo Maculado',
+        symbol: 'L',
+        maxHp: 45,
+        position: {
+            row: 1,
+            column: 6
+        }
+    }
+];
