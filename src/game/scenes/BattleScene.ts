@@ -26,6 +26,7 @@ import {
     P0_SCENE_TEXT_LAYOUT,
     P0_TILE_COLORS,
     P0_TILE_STYLES,
+    P0_UNIT_MARKER_CONFIG,
 } from "../data/battleConfig";
 import {
     ActiveFlameInvocation,
@@ -534,89 +535,141 @@ export class BattleScene extends Scene {
     }
 
     private createPlayerMarker(): void {
+        const config = P0_UNIT_MARKER_CONFIG.player;
+
         const position = this.getTileFootPosition(
             this.playerPosition.row,
             this.playerPosition.column,
         );
 
-        const shadow = this.add.ellipse(0, 1, 48, 18, 0x000000, 0.5);
+        const shadow = this.add.ellipse(
+            config.shadow.x,
+            config.shadow.y,
+            config.shadow.width,
+            config.shadow.height,
+            config.shadow.fillColor,
+            config.shadow.alpha,
+        );
 
         const body = this.add
-            .circle(0, -24, 19, 0x9f3820, 1)
-            .setStrokeStyle(3, 0xf2b34b, 1);
+            .circle(
+                config.body.x,
+                config.body.y,
+                config.body.radius,
+                config.body.fillColor,
+                1,
+            )
+            .setStrokeStyle(
+                config.body.strokeWidth,
+                config.body.strokeColor,
+                1,
+            );
 
         const initial = this.add
-            .text(0, -25, this.playerSymbol, {
+            .text(config.symbol.x, config.symbol.y, this.playerSymbol, {
                 fontFamily: "Georgia, serif",
-                fontSize: "21px",
+                fontSize: config.symbol.fontSize,
                 fontStyle: "bold",
-                color: "#ffe6a8",
+                color: config.symbol.color,
             })
             .setOrigin(0.5);
 
         const label = this.add
-            .text(0, -55, this.playerName, {
+            .text(config.label.x, config.label.y, this.playerName, {
                 fontFamily: "Georgia, serif",
-                fontSize: "11px",
-                color: "#f0c586",
-                backgroundColor: "#211410",
+                fontSize: config.label.fontSize,
+                color: config.label.color,
+                backgroundColor: config.label.backgroundColor,
                 padding: {
-                    x: 6,
-                    y: 3,
+                    x: config.label.paddingX,
+                    y: config.label.paddingY,
                 },
             })
             .setOrigin(0.5);
 
         this.playerMarker = this.add
             .container(position.x, position.y, [shadow, body, initial, label])
-            .setDepth(position.y + 50);
-
-        this.playerMarker.on("pointerdown", () => {
-            this.startPlayerMovement();
-        });
+            .setDepth(position.y + config.depthOffset);
     }
 
     private createEnemies(): void {
+        const config = P0_UNIT_MARKER_CONFIG.enemy;
+
         for (const initialEnemy of INITIAL_ENEMIES) {
             const position = this.getTileFootPosition(
                 initialEnemy.position.row,
                 initialEnemy.position.column,
             );
 
-            const shadow = this.add.ellipse(0, 1, 46, 16, 0x000000, 0.55);
+            const shadow = this.add.ellipse(
+                config.shadow.x,
+                config.shadow.y,
+                config.shadow.width,
+                config.shadow.height,
+                config.shadow.fillColor,
+                config.shadow.alpha,
+            );
 
             const body = this.add
-                .circle(0, -22, 18, 0x231823, 1)
-                .setStrokeStyle(3, 0xc94439, 1);
+                .circle(
+                    config.body.x,
+                    config.body.y,
+                    config.body.radius,
+                    config.body.fillColor,
+                    1,
+                )
+                .setStrokeStyle(
+                    config.body.strokeWidth,
+                    config.body.strokeColor,
+                    1,
+                );
 
             const symbol = this.add
-                .text(0, -23, initialEnemy.symbol, {
+                .text(config.symbol.x, config.symbol.y, initialEnemy.symbol, {
                     fontFamily: "Georgia, serif",
-                    fontSize: "20px",
+                    fontSize: config.symbol.fontSize,
                     fontStyle: "bold",
-                    color: "#f1a0a0",
+                    color: config.symbol.color,
                 })
                 .setOrigin(0.5);
 
             const label = this.add
-                .text(0, -57, initialEnemy.name, {
+                .text(config.label.x, config.label.y, initialEnemy.name, {
                     fontFamily: "Georgia, serif",
-                    fontSize: "11px",
-                    color: "#e6b4a6",
-                    backgroundColor: "#201014",
+                    fontSize: config.label.fontSize,
+                    color: config.label.color,
+                    backgroundColor: config.label.backgroundColor,
                     padding: {
-                        x: 6,
-                        y: 3,
+                        x: config.label.paddingX,
+                        y: config.label.paddingY,
                     },
                 })
                 .setOrigin(0.5);
 
             const healthBackground = this.add
-                .rectangle(0, -42, 48, 5, 0x241215, 1)
-                .setStrokeStyle(1, 0x4a292c, 1);
+                .rectangle(
+                    config.healthBackground.x,
+                    config.healthBackground.y,
+                    config.healthBackground.width,
+                    config.healthBackground.height,
+                    config.healthBackground.fillColor,
+                    1,
+                )
+                .setStrokeStyle(
+                    config.healthBackground.strokeWidth,
+                    config.healthBackground.strokeColor,
+                    1,
+                );
 
             const healthBar = this.add
-                .rectangle(-23, -42, 46, 3, 0xb43a39, 1)
+                .rectangle(
+                    config.healthBar.x,
+                    config.healthBar.y,
+                    config.healthBar.width,
+                    config.healthBar.height,
+                    config.healthBar.fillColor,
+                    1,
+                )
                 .setOrigin(0, 0.5);
 
             const marker = this.add
@@ -628,7 +681,7 @@ export class BattleScene extends Scene {
                     healthBackground,
                     healthBar,
                 ])
-                .setDepth(position.y + 50);
+                .setDepth(position.y + config.depthOffset);
 
             this.enemies.push({
                 ...initialEnemy,
