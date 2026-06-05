@@ -19,6 +19,7 @@ import {
     P0_ABILITY_PANEL_LAYOUT,
     P0_BACKGROUND_LAYOUT,
     P0_COMBAT_HUD_LAYOUT,
+    P0_EFFECTS_CONFIG,
     P0_GRID_CONFIG,
     P0_ISOMETRIC_CONFIG,
     P0_LEGEND_LAYOUT,
@@ -1364,26 +1365,33 @@ export class BattleScene extends Scene {
             centerTile.column,
         );
 
+        const markerConfig = P0_EFFECTS_CONFIG.flameInvocationMarker;
+
         const marker = this.add
-            .text(centerPosition.x, centerPosition.y - 42, "☄", {
-                fontFamily: "Georgia, serif",
-                fontSize: "34px",
-                fontStyle: "bold",
-                color: "#ffb347",
-                stroke: "#3b130d",
-                strokeThickness: 4,
-            })
+            .text(
+                centerPosition.x,
+                centerPosition.y + markerConfig.yOffset,
+                markerConfig.symbol,
+                {
+                    fontFamily: markerConfig.fontFamily,
+                    fontSize: markerConfig.fontSize,
+                    fontStyle: markerConfig.fontStyle,
+                    color: markerConfig.color,
+                    stroke: markerConfig.stroke,
+                    strokeThickness: markerConfig.strokeThickness,
+                },
+            )
             .setOrigin(0.5)
-            .setDepth(5000);
+            .setDepth(markerConfig.depth);
 
         this.tweens.add({
             targets: marker,
-            y: marker.y - 10,
+            y: marker.y + markerConfig.tweenYOffset,
             alpha: {
-                from: 0.65,
-                to: 1,
+                from: markerConfig.tweenAlphaFrom,
+                to: markerConfig.tweenAlphaTo,
             },
-            duration: 650,
+            duration: markerConfig.duration,
             yoyo: true,
             repeat: -1,
         });
@@ -1530,28 +1538,34 @@ export class BattleScene extends Scene {
             this.playerShieldAura.destroy();
         }
 
+        const config = P0_EFFECTS_CONFIG.shieldAura;
+
         this.playerShieldAura = this.add
             .circle(
                 this.playerMarker.x,
-                this.playerMarker.y - 23,
-                29,
-                0xf57c20,
-                0.12,
+                this.playerMarker.y + config.yOffset,
+                config.radius,
+                config.fillColor,
+                config.alpha,
             )
-            .setStrokeStyle(3, 0xffa43c, 0.9)
-            .setDepth(this.playerMarker.depth + 1);
+            .setStrokeStyle(
+                config.strokeWidth,
+                config.strokeColor,
+                config.strokeAlpha,
+            )
+            .setDepth(this.playerMarker.depth + config.depthOffset);
 
         this.tweens.add({
             targets: this.playerShieldAura,
             alpha: {
-                from: 0.55,
-                to: 1,
+                from: config.tweenAlphaFrom,
+                to: config.tweenAlphaTo,
             },
             scale: {
-                from: 0.95,
-                to: 1.08,
+                from: config.tweenScaleFrom,
+                to: config.tweenScaleTo,
             },
-            duration: 540,
+            duration: config.duration,
             yoyo: true,
             repeat: -1,
         });
@@ -1694,20 +1708,38 @@ export class BattleScene extends Scene {
         this.attackTileKeys.clear();
         this.refreshAllTiles();
 
+        const projectileConfig = P0_EFFECTS_CONFIG.fireballProjectile;
+
         const projectileGlow = this.add
-            .circle(origin.x, origin.y - 25, 11, 0xff4e16, 0.25)
-            .setDepth(1000);
+            .circle(
+                origin.x,
+                origin.y + projectileConfig.yOffset,
+                projectileConfig.glowRadius,
+                projectileConfig.glowColor,
+                projectileConfig.glowAlpha,
+            )
+            .setDepth(projectileConfig.glowDepth);
 
         const projectile = this.add
-            .circle(origin.x, origin.y - 25, 7, 0xffa329, 1)
-            .setStrokeStyle(2, 0xffe08b, 1)
-            .setDepth(1001);
+            .circle(
+                origin.x,
+                origin.y + projectileConfig.yOffset,
+                projectileConfig.projectileRadius,
+                projectileConfig.projectileColor,
+                1,
+            )
+            .setStrokeStyle(
+                projectileConfig.projectileStrokeWidth,
+                projectileConfig.projectileStrokeColor,
+                1,
+            )
+            .setDepth(projectileConfig.projectileDepth);
 
         this.tweens.add({
             targets: [projectileGlow, projectile],
             x: destination.x,
-            y: destination.y - 23,
-            duration: 340,
+            y: destination.y + projectileConfig.destinationYOffset,
+            duration: projectileConfig.duration,
             ease: "Power2",
             onComplete: () => {
                 projectileGlow.destroy();
@@ -1811,10 +1843,17 @@ export class BattleScene extends Scene {
         enemy.burnDamage = burnDamage;
 
         if (!enemy.burnMarker) {
+            const burnMarkerConfig = P0_EFFECTS_CONFIG.burnMarker;
+
             enemy.burnMarker = this.add
-                .text(22, -24, "🔥", {
-                    fontSize: "16px",
-                })
+                .text(
+                    burnMarkerConfig.x,
+                    burnMarkerConfig.y,
+                    burnMarkerConfig.symbol,
+                    {
+                        fontSize: burnMarkerConfig.fontSize,
+                    },
+                )
                 .setOrigin(0.5);
 
             enemy.marker.add(enemy.burnMarker);
@@ -2064,33 +2103,7 @@ export class BattleScene extends Scene {
 
         enemy.burningRounds -= 1;
 
-        const burnDamageText = this.add
-            .text(
-                enemy.marker.x,
-                enemy.marker.y - 78,
-                `-${enemy.burnDamage} 🔥`,
-                {
-                    fontFamily: "Georgia, serif",
-                    fontSize: "16px",
-                    fontStyle: "bold",
-                    color: "#ff8533",
-                    stroke: "#34120d",
-                    strokeThickness: 3,
-                },
-            )
-            .setOrigin(0.5)
-            .setDepth(2000);
-
-        this.tweens.add({
-            targets: burnDamageText,
-            y: burnDamageText.y - 24,
-            alpha: 0,
-            duration: 620,
-            ease: "Power2",
-            onComplete: () => {
-                burnDamageText.destroy();
-            },
-        });
+        this.showBurnFloatingDamage(enemy, `-${enemy.burnDamage} 🔥`);
 
         if (enemy.defeated) {
             this.coordinateText.setText(
@@ -2135,6 +2148,33 @@ export class BattleScene extends Scene {
 
         this.time.delayedCall(650, () => {
             onComplete();
+        });
+    }
+
+    private showBurnFloatingDamage(enemy: EnemyUnit, text: string): void {
+        const config = P0_EFFECTS_CONFIG.burnFloatingDamage;
+
+        const burnDamageText = this.add
+            .text(enemy.marker.x, enemy.marker.y + config.yOffset, text, {
+                fontFamily: config.fontFamily,
+                fontSize: config.fontSize,
+                fontStyle: config.fontStyle,
+                color: config.color,
+                stroke: config.stroke,
+                strokeThickness: config.strokeThickness,
+            })
+            .setOrigin(0.5)
+            .setDepth(config.depth);
+
+        this.tweens.add({
+            targets: burnDamageText,
+            y: burnDamageText.y + config.moveY,
+            alpha: 0,
+            duration: config.duration,
+            ease: "Power2",
+            onComplete: () => {
+                burnDamageText.destroy();
+            },
         });
     }
 
@@ -2505,16 +2545,28 @@ export class BattleScene extends Scene {
 
         activeInvocation.marker.destroy();
 
+        const impactConfig = P0_EFFECTS_CONFIG.flameInvocationImpact;
+
         const impact = this.add
-            .circle(centerPosition.x, centerPosition.y, 12, 0xff8a1c, 0.85)
-            .setStrokeStyle(4, 0xffdc73, 1)
-            .setDepth(6000);
+            .circle(
+                centerPosition.x,
+                centerPosition.y,
+                impactConfig.radius,
+                impactConfig.fillColor,
+                impactConfig.alpha,
+            )
+            .setStrokeStyle(
+                impactConfig.strokeWidth,
+                impactConfig.strokeColor,
+                1,
+            )
+            .setDepth(impactConfig.depth);
 
         this.tweens.add({
             targets: impact,
-            scale: 7,
+            scale: impactConfig.scale,
             alpha: 0,
-            duration: 620,
+            duration: impactConfig.duration,
             ease: "Power2",
             onComplete: () => {
                 impact.destroy();
@@ -2854,16 +2906,28 @@ export class BattleScene extends Scene {
 
         const position = this.getTileCenter(centerTile.row, centerTile.column);
 
+        const impactConfig = P0_EFFECTS_CONFIG.explosionImpact;
+
         const impact = this.add
-            .circle(position.x, position.y, 10, 0xff731c, 0.75)
-            .setStrokeStyle(3, 0xffc34d, 1)
-            .setDepth(3000);
+            .circle(
+                position.x,
+                position.y,
+                impactConfig.radius,
+                impactConfig.fillColor,
+                impactConfig.alpha,
+            )
+            .setStrokeStyle(
+                impactConfig.strokeWidth,
+                impactConfig.strokeColor,
+                1,
+            )
+            .setDepth(impactConfig.depth);
 
         this.tweens.add({
             targets: impact,
-            scale: 5,
+            scale: impactConfig.scale,
             alpha: 0,
-            duration: 430,
+            duration: impactConfig.duration,
             ease: "Power2",
             onComplete: () => {
                 impact.destroy();
@@ -2942,23 +3006,25 @@ export class BattleScene extends Scene {
         text: string,
         color: string,
     ): void {
+        const config = P0_EFFECTS_CONFIG.floatingDamage;
+
         const damageText = this.add
-            .text(enemy.marker.x, enemy.marker.y - 78, text, {
-                fontFamily: "Georgia, serif",
-                fontSize: "17px",
-                fontStyle: "bold",
+            .text(enemy.marker.x, enemy.marker.y + config.yOffset, text, {
+                fontFamily: config.fontFamily,
+                fontSize: config.fontSize,
+                fontStyle: config.fontStyle,
                 color,
-                stroke: "#32130d",
-                strokeThickness: 3,
+                stroke: config.stroke,
+                strokeThickness: config.strokeThickness,
             })
             .setOrigin(0.5)
-            .setDepth(4000);
+            .setDepth(config.depth);
 
         this.tweens.add({
             targets: damageText,
-            y: damageText.y - 24,
+            y: damageText.y + config.moveY,
             alpha: 0,
-            duration: 650,
+            duration: config.duration,
             ease: "Power2",
             onComplete: () => {
                 damageText.destroy();
@@ -2981,17 +3047,19 @@ export class BattleScene extends Scene {
 
         const position = this.getTileCenter(tile.row, tile.column);
 
+        const burningGroundConfig = P0_EFFECTS_CONFIG.burningGround;
+
         const marker = this.add
-            .text(position.x, position.y, "♨", {
-                fontFamily: "Georgia, serif",
-                fontSize: "22px",
-                fontStyle: "bold",
-                color: "#ff6527",
-                stroke: "#3b130d",
-                strokeThickness: 3,
+            .text(position.x, position.y, burningGroundConfig.symbol, {
+                fontFamily: burningGroundConfig.fontFamily,
+                fontSize: burningGroundConfig.fontSize,
+                fontStyle: burningGroundConfig.fontStyle,
+                color: burningGroundConfig.color,
+                stroke: burningGroundConfig.stroke,
+                strokeThickness: burningGroundConfig.strokeThickness,
             })
             .setOrigin(0.5)
-            .setDepth(position.y + 3);
+            .setDepth(position.y + burningGroundConfig.depthOffset);
 
         this.burningGroundEffects.set(key, {
             key,
