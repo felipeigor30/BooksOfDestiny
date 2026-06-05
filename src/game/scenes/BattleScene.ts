@@ -40,6 +40,15 @@ interface PanelButton {
     label: GameObjects.Text;
 }
 
+interface PanelButtonStyle {
+    enabledFillColor: number;
+    enabledStrokeColor: number;
+    enabledTextColor: string;
+    disabledFillColor: number;
+    disabledStrokeColor: number;
+    disabledTextColor: string;
+}
+
 export class BattleScene extends Scene {
     private readonly rows = P0_GRID_CONFIG.rows;
     private readonly columns = P0_GRID_CONFIG.columns;
@@ -61,6 +70,41 @@ export class BattleScene extends Scene {
     private readonly explosionAreaColor = P0_TILE_COLORS.explosionArea;
     private readonly burningGroundColor = P0_TILE_COLORS.burningGround;
 
+    private readonly defaultAbilityButtonStyle: PanelButtonStyle = {
+        enabledFillColor: 0x4b2918,
+        enabledStrokeColor: 0xdc8732,
+        enabledTextColor: "#ffd493",
+        disabledFillColor: 0x22181a,
+        disabledStrokeColor: 0x4e352a,
+        disabledTextColor: "#7e6c60",
+    };
+
+    private readonly fireballButtonStyle: PanelButtonStyle = {
+        enabledFillColor: 0x502017,
+        enabledStrokeColor: 0xd06a2b,
+        enabledTextColor: "#ffd08a",
+        disabledFillColor: 0x22181a,
+        disabledStrokeColor: 0x4e352a,
+        disabledTextColor: "#7e6c60",
+    };
+
+    private readonly explosionButtonStyle: PanelButtonStyle = {
+        enabledFillColor: 0x65241a,
+        enabledStrokeColor: 0xf08a35,
+        enabledTextColor: "#ffd07d",
+        disabledFillColor: 0x22181a,
+        disabledStrokeColor: 0x4e352a,
+        disabledTextColor: "#71655b",
+    };
+
+    private readonly passTurnButtonStyle: PanelButtonStyle = {
+        enabledFillColor: 0x302119,
+        enabledStrokeColor: 0xb67b39,
+        enabledTextColor: "#f0ca83",
+        disabledFillColor: 0x21181a,
+        disabledStrokeColor: 0x4e352a,
+        disabledTextColor: "#71655b",
+    };
     private readonly entityFootOffsetY = P0_ISOMETRIC_CONFIG.entityFootOffsetY;
     private readonly rockFootOffsetY = P0_ISOMETRIC_CONFIG.rockFootOffsetY;
     private readonly showDebugTileCoordinates = false;
@@ -120,20 +164,11 @@ export class BattleScene extends Scene {
 
     private concentrationText!: GameObjects.Text;
 
-    private fireballButtonBackground!: GameObjects.Rectangle;
-    private fireballButtonLabel!: GameObjects.Text;
-
-    private shieldButtonBackground!: GameObjects.Rectangle;
-    private shieldButtonLabel!: GameObjects.Text;
-
-    private explosionButtonBackground!: GameObjects.Rectangle;
-    private explosionButtonLabel!: GameObjects.Text;
-
-    private flameInvocationButtonBackground!: GameObjects.Rectangle;
-    private flameInvocationButtonLabel!: GameObjects.Text;
-
-    private passTurnButtonBackground!: GameObjects.Rectangle;
-    private passTurnButtonLabel!: GameObjects.Text;
+    private fireballButton!: PanelButton;
+    private shieldButton!: PanelButton;
+    private explosionButton!: PanelButton;
+    private flameInvocationButton!: PanelButton;
+    private passTurnButton!: PanelButton;
 
     constructor() {
         super("BattleScene");
@@ -658,7 +693,7 @@ export class BattleScene extends Scene {
             color: "#d4a45f",
         });
 
-        const fireballButton = this.createPanelButton(
+        this.fireballButton = this.createPanelButton(
             765,
             535,
             126,
@@ -668,10 +703,7 @@ export class BattleScene extends Scene {
             () => this.selectFireball(),
         );
 
-        this.fireballButtonBackground = fireballButton.background;
-        this.fireballButtonLabel = fireballButton.label;
-
-        const shieldButton = this.createPanelButton(
+        this.shieldButton = this.createPanelButton(
             905,
             535,
             126,
@@ -681,10 +713,7 @@ export class BattleScene extends Scene {
             () => this.castIgneousShield(),
         );
 
-        this.shieldButtonBackground = shieldButton.background;
-        this.shieldButtonLabel = shieldButton.label;
-
-        const explosionButton = this.createPanelButton(
+        this.explosionButton = this.createPanelButton(
             765,
             576,
             126,
@@ -694,10 +723,7 @@ export class BattleScene extends Scene {
             () => this.selectIgneousExplosion(),
         );
 
-        this.explosionButtonBackground = explosionButton.background;
-        this.explosionButtonLabel = explosionButton.label;
-
-        const flameInvocationButton = this.createPanelButton(
+        this.flameInvocationButton = this.createPanelButton(
             905,
             576,
             126,
@@ -707,10 +733,7 @@ export class BattleScene extends Scene {
             () => this.selectFlameInvocation(),
         );
 
-        this.flameInvocationButtonBackground = flameInvocationButton.background;
-        this.flameInvocationButtonLabel = flameInvocationButton.label;
-
-        const passTurnButton = this.createPanelButton(
+        this.passTurnButton = this.createPanelButton(
             835,
             617,
             266,
@@ -719,9 +742,6 @@ export class BattleScene extends Scene {
             "12px",
             () => this.passPlayerTurn(),
         );
-
-        this.passTurnButtonBackground = passTurnButton.background;
-        this.passTurnButtonLabel = passTurnButton.label;
 
         this.concentrationText = this.add.text(
             700,
@@ -987,72 +1007,57 @@ export class BattleScene extends Scene {
         );
     }
 
-    private setFireballButtonEnabled(enabled: boolean): void {
+    private setPanelButtonEnabled(
+        button: PanelButton,
+        enabled: boolean,
+        style: PanelButtonStyle,
+    ): void {
         if (enabled) {
-            this.fireballButtonBackground
-                .setFillStyle(0x502017, 1)
-                .setStrokeStyle(2, 0xd06a2b, 1);
+            button.background
+                .setFillStyle(style.enabledFillColor, 1)
+                .setStrokeStyle(2, style.enabledStrokeColor, 1);
 
-            this.fireballButtonLabel.setColor("#ffd08a");
+            button.label.setColor(style.enabledTextColor);
             return;
         }
 
-        this.fireballButtonBackground
-            .setFillStyle(0x22181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
+        button.background
+            .setFillStyle(style.disabledFillColor, 1)
+            .setStrokeStyle(2, style.disabledStrokeColor, 1);
 
-        this.fireballButtonLabel.setColor("#7e6c60");
+        button.label.setColor(style.disabledTextColor);
+    }
+
+    private setFireballButtonEnabled(enabled: boolean): void {
+        this.setPanelButtonEnabled(
+            this.fireballButton,
+            enabled,
+            this.fireballButtonStyle,
+        );
     }
 
     private setShieldButtonEnabled(enabled: boolean): void {
-        if (enabled) {
-            this.shieldButtonBackground
-                .setFillStyle(0x4b2918, 1)
-                .setStrokeStyle(2, 0xdc8732, 1);
-
-            this.shieldButtonLabel.setColor("#ffd493");
-            return;
-        }
-
-        this.shieldButtonBackground
-            .setFillStyle(0x22181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
-
-        this.shieldButtonLabel.setColor("#7e6c60");
+        this.setPanelButtonEnabled(
+            this.shieldButton,
+            enabled,
+            this.defaultAbilityButtonStyle,
+        );
     }
 
     private setExplosionButtonEnabled(enabled: boolean): void {
-        if (enabled) {
-            this.explosionButtonBackground
-                .setFillStyle(0x65241a, 1)
-                .setStrokeStyle(2, 0xf08a35, 1);
-
-            this.explosionButtonLabel.setColor("#ffd07d");
-            return;
-        }
-
-        this.explosionButtonBackground
-            .setFillStyle(0x22181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
-
-        this.explosionButtonLabel.setColor("#71655b");
+        this.setPanelButtonEnabled(
+            this.explosionButton,
+            enabled,
+            this.explosionButtonStyle,
+        );
     }
 
     private setFlameInvocationButtonEnabled(enabled: boolean): void {
-        if (enabled) {
-            this.flameInvocationButtonBackground
-                .setFillStyle(0x4d251b, 1)
-                .setStrokeStyle(2, 0xe48a38, 1);
-
-            this.flameInvocationButtonLabel.setColor("#ffd08a");
-            return;
-        }
-
-        this.flameInvocationButtonBackground
-            .setFillStyle(0x22181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
-
-        this.flameInvocationButtonLabel.setColor("#71655b");
+        this.setPanelButtonEnabled(
+            this.flameInvocationButton,
+            enabled,
+            this.defaultAbilityButtonStyle,
+        );
     }
 
     private updateExplosionAvailability(): void {
@@ -1066,21 +1071,13 @@ export class BattleScene extends Scene {
 
         this.setExplosionButtonEnabled(canUseExplosion);
     }
+
     private setPassTurnButtonEnabled(enabled: boolean): void {
-        if (enabled) {
-            this.passTurnButtonBackground
-                .setFillStyle(0x302119, 1)
-                .setStrokeStyle(2, 0xb67b39, 1);
-
-            this.passTurnButtonLabel.setColor("#f0ca83");
-            return;
-        }
-
-        this.passTurnButtonBackground
-            .setFillStyle(0x21181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
-
-        this.passTurnButtonLabel.setColor("#71655b");
+        this.setPanelButtonEnabled(
+            this.passTurnButton,
+            enabled,
+            this.passTurnButtonStyle,
+        );
     }
 
     private selectFireball(): void {
