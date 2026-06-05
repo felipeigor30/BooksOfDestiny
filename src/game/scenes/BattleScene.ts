@@ -6,6 +6,7 @@ import {
     IGNEOUS_SHIELD,
     IGNEOUS_EXPLOSION,
 } from "../data/abilities";
+import { FIRE_KNIGHT_INITIAL_STATS } from "../data/player";
 import {
     GridPosition,
     INITIAL_ENEMIES,
@@ -67,12 +68,15 @@ export class BattleScene extends Scene {
     private playerPosition: GridPosition = { ...INITIAL_PLAYER_POSITION };
     private playerMarker?: GameObjects.Container;
 
-    private readonly playerMaxHp = 100;
-    private playerCurrentHp = 100;
+    private readonly playerName = FIRE_KNIGHT_INITIAL_STATS.name;
+    private readonly playerSymbol = FIRE_KNIGHT_INITIAL_STATS.symbol;
+    private readonly playerMaxHp = FIRE_KNIGHT_INITIAL_STATS.maxHp;
+
+    private playerCurrentHp = FIRE_KNIGHT_INITIAL_STATS.maxHp;
     private playerHealthBar!: GameObjects.Rectangle;
     private playerHpText!: GameObjects.Text;
 
-    private playerShield = 0;
+    private playerShield = FIRE_KNIGHT_INITIAL_STATS.initialShield;
     private playerShieldText!: GameObjects.Text;
     private playerShieldAura?: GameObjects.Arc;
 
@@ -103,7 +107,7 @@ export class BattleScene extends Scene {
 
     private burningGroundEffects = new Map<string, BurningGroundEffect>();
 
-    private concentration = 0;
+    private concentration = FIRE_KNIGHT_INITIAL_STATS.initialConcentration;
 
     private coordinateText!: GameObjects.Text;
     private instructionText!: GameObjects.Text;
@@ -231,11 +235,16 @@ export class BattleScene extends Scene {
             color: "#db9357",
         });
 
-        this.playerShieldText = this.add.text(123, 137, "0 / 25", {
-            fontFamily: "Georgia, serif",
-            fontSize: "12px",
-            color: "#816a5b",
-        });
+        this.playerShieldText = this.add.text(
+            123,
+            137,
+            `${this.playerShield} / ${IGNEOUS_SHIELD.shieldAbsorption ?? 0}`,
+            {
+                fontFamily: "Georgia, serif",
+                fontSize: "12px",
+                color: "#816a5b",
+            },
+        );
 
         this.roundText = this.add
             .text(932, 114, `RODADA ${this.round}`, {
@@ -480,7 +489,7 @@ export class BattleScene extends Scene {
             .setStrokeStyle(3, 0xf2b34b, 1);
 
         const initial = this.add
-            .text(0, -25, "F", {
+            .text(0, -25, this.playerSymbol, {
                 fontFamily: "Georgia, serif",
                 fontSize: "21px",
                 fontStyle: "bold",
@@ -489,7 +498,7 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
 
         const label = this.add
-            .text(0, -55, "Cavaleiro de Fogo", {
+            .text(0, -55, this.playerName, {
                 fontFamily: "Georgia, serif",
                 fontSize: "11px",
                 color: "#f0c586",
