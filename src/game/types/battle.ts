@@ -46,3 +46,12 @@ export interface ActiveFlameInvocation {
     areaTileKeys: Set<string>;
     marker: GameObjects.Text;
 }
+
+export interface PanelButtonStyle {
+    enabledFillColor: number;
+    enabledStrokeColor: number;
+    enabledTextColor: string;
+    disabledFillColor: number;
+    disabledStrokeColor: number;
+    disabledTextColor: string;
+}

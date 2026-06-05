@@ -18,6 +18,7 @@ import {
 import {
     P0_GRID_CONFIG,
     P0_ISOMETRIC_CONFIG,
+    P0_PANEL_BUTTON_STYLES,
     P0_TILE_COLORS,
     P0_TILE_STYLES,
 } from "../data/battleConfig";
@@ -26,6 +27,7 @@ import {
     ArenaTile,
     BurningGroundEffect,
     EnemyUnit,
+    PanelButtonStyle,
     TileStyle,
 } from "../types/battle";
 import {
@@ -38,15 +40,6 @@ import {
 interface PanelButton {
     background: GameObjects.Rectangle;
     label: GameObjects.Text;
-}
-
-interface PanelButtonStyle {
-    enabledFillColor: number;
-    enabledStrokeColor: number;
-    enabledTextColor: string;
-    disabledFillColor: number;
-    disabledStrokeColor: number;
-    disabledTextColor: string;
 }
 
 export class BattleScene extends Scene {
@@ -70,41 +63,6 @@ export class BattleScene extends Scene {
     private readonly explosionAreaColor = P0_TILE_COLORS.explosionArea;
     private readonly burningGroundColor = P0_TILE_COLORS.burningGround;
 
-    private readonly defaultAbilityButtonStyle: PanelButtonStyle = {
-        enabledFillColor: 0x4b2918,
-        enabledStrokeColor: 0xdc8732,
-        enabledTextColor: "#ffd493",
-        disabledFillColor: 0x22181a,
-        disabledStrokeColor: 0x4e352a,
-        disabledTextColor: "#7e6c60",
-    };
-
-    private readonly fireballButtonStyle: PanelButtonStyle = {
-        enabledFillColor: 0x502017,
-        enabledStrokeColor: 0xd06a2b,
-        enabledTextColor: "#ffd08a",
-        disabledFillColor: 0x22181a,
-        disabledStrokeColor: 0x4e352a,
-        disabledTextColor: "#7e6c60",
-    };
-
-    private readonly explosionButtonStyle: PanelButtonStyle = {
-        enabledFillColor: 0x65241a,
-        enabledStrokeColor: 0xf08a35,
-        enabledTextColor: "#ffd07d",
-        disabledFillColor: 0x22181a,
-        disabledStrokeColor: 0x4e352a,
-        disabledTextColor: "#71655b",
-    };
-
-    private readonly passTurnButtonStyle: PanelButtonStyle = {
-        enabledFillColor: 0x302119,
-        enabledStrokeColor: 0xb67b39,
-        enabledTextColor: "#f0ca83",
-        disabledFillColor: 0x21181a,
-        disabledStrokeColor: 0x4e352a,
-        disabledTextColor: "#71655b",
-    };
     private readonly entityFootOffsetY = P0_ISOMETRIC_CONFIG.entityFootOffsetY;
     private readonly rockFootOffsetY = P0_ISOMETRIC_CONFIG.rockFootOffsetY;
     private readonly showDebugTileCoordinates = false;
@@ -1032,7 +990,7 @@ export class BattleScene extends Scene {
         this.setPanelButtonEnabled(
             this.fireballButton,
             enabled,
-            this.fireballButtonStyle,
+            P0_PANEL_BUTTON_STYLES.fireball,
         );
     }
 
@@ -1040,7 +998,7 @@ export class BattleScene extends Scene {
         this.setPanelButtonEnabled(
             this.shieldButton,
             enabled,
-            this.defaultAbilityButtonStyle,
+            P0_PANEL_BUTTON_STYLES.defaultAbility,
         );
     }
 
@@ -1048,7 +1006,7 @@ export class BattleScene extends Scene {
         this.setPanelButtonEnabled(
             this.explosionButton,
             enabled,
-            this.explosionButtonStyle,
+            P0_PANEL_BUTTON_STYLES.explosion,
         );
     }
 
@@ -1056,7 +1014,7 @@ export class BattleScene extends Scene {
         this.setPanelButtonEnabled(
             this.flameInvocationButton,
             enabled,
-            this.defaultAbilityButtonStyle,
+            P0_PANEL_BUTTON_STYLES.defaultAbility,
         );
     }
 
@@ -1076,7 +1034,7 @@ export class BattleScene extends Scene {
         this.setPanelButtonEnabled(
             this.passTurnButton,
             enabled,
-            this.passTurnButtonStyle,
+            P0_PANEL_BUTTON_STYLES.passTurn,
         );
     }
 
