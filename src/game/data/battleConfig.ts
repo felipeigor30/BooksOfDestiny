@@ -1,5 +1,6 @@
 import type { TileType } from "./arena";
 import type {
+    LegendLayout,
     PanelButtonLayout,
     PanelButtonStyle,
     RectLayout,
@@ -240,3 +241,39 @@ export const P0_SCENE_TEXT_LAYOUT = {
         fontSize: "16px",
     },
 } as const;
+export const P0_LEGEND_LAYOUT: LegendLayout = {
+    box: {
+        x: 512,
+        y: 706,
+        width: 650,
+        height: 30,
+    },
+    y: 706,
+    items: [
+        {
+            x: 280,
+            label: "◆ Chão",
+            color: "#96705b",
+        },
+        {
+            x: 410,
+            label: "✦ Corrupção",
+            color: "#bd4d51",
+        },
+        {
+            x: 563,
+            label: "▲ Rocha",
+            color: "#968981",
+        },
+        {
+            x: 680,
+            label: "F Cavaleiro",
+            color: "#e4aa52",
+        },
+        {
+            x: 785,
+            label: "L Lobo",
+            color: "#e6817d",
+        },
+    ],
+};

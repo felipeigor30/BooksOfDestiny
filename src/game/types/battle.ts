@@ -73,3 +73,15 @@ export interface PanelButtonLayout extends RectLayout {
     label: string;
     fontSize: string;
 }
+
+export interface LegendItemLayout {
+    x: number;
+    label: string;
+    color: string;
+}
+
+export interface LegendLayout {
+    box: RectLayout;
+    y: number;
+    items: LegendItemLayout[];
+}

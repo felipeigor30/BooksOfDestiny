@@ -20,6 +20,7 @@ import {
     P0_COMBAT_HUD_LAYOUT,
     P0_GRID_CONFIG,
     P0_ISOMETRIC_CONFIG,
+    P0_LEGEND_LAYOUT,
     P0_PANEL_BUTTON_STYLES,
     P0_SCENE_TEXT_LAYOUT,
     P0_TILE_COLORS,
@@ -782,51 +783,28 @@ export class BattleScene extends Scene {
     }
 
     private createLegend(): void {
-        const legendY = 706;
+        const layout = P0_LEGEND_LAYOUT;
 
         this.add
-            .rectangle(512, legendY, 650, 30, 0x100c0d, 0.85)
+            .rectangle(
+                layout.box.x,
+                layout.box.y,
+                layout.box.width,
+                layout.box.height,
+                0x100c0d,
+                0.85,
+            )
             .setStrokeStyle(1, 0x35231c, 1);
 
-        this.add
-            .text(280, legendY, "◆ Chão", {
-                fontFamily: "Arial",
-                fontSize: "12px",
-                color: "#96705b",
-            })
-            .setOrigin(0, 0.5);
-
-        this.add
-            .text(410, legendY, "✦ Corrupção", {
-                fontFamily: "Arial",
-                fontSize: "12px",
-                color: "#bd4d51",
-            })
-            .setOrigin(0, 0.5);
-
-        this.add
-            .text(563, legendY, "▲ Rocha", {
-                fontFamily: "Arial",
-                fontSize: "12px",
-                color: "#968981",
-            })
-            .setOrigin(0, 0.5);
-
-        this.add
-            .text(680, legendY, "F Cavaleiro", {
-                fontFamily: "Arial",
-                fontSize: "12px",
-                color: "#e4aa52",
-            })
-            .setOrigin(0, 0.5);
-
-        this.add
-            .text(785, legendY, "L Lobo", {
-                fontFamily: "Arial",
-                fontSize: "12px",
-                color: "#e6817d",
-            })
-            .setOrigin(0, 0.5);
+        for (const item of layout.items) {
+            this.add
+                .text(item.x, layout.y, item.label, {
+                    fontFamily: "Arial",
+                    fontSize: "12px",
+                    color: item.color,
+                })
+                .setOrigin(0, 0.5);
+        }
     }
 
     private startPlayerMovement(): void {
