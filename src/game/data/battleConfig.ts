@@ -1,5 +1,6 @@
 import type { TileType } from "./arena";
 import type {
+    ColoredRectLayout,
     LegendLayout,
     PanelButtonLayout,
     PanelButtonStyle,
@@ -276,4 +277,30 @@ export const P0_LEGEND_LAYOUT: LegendLayout = {
             color: "#e6817d",
         },
     ],
+};
+
+export const P0_BACKGROUND_LAYOUT: {
+    screen: ColoredRectLayout;
+    battleFrame: ColoredRectLayout;
+} = {
+    screen: {
+        x: 512,
+        y: 384,
+        width: 1024,
+        height: 768,
+        fillColor: 0x09070b,
+        alpha: 1,
+        depth: -10,
+    },
+    battleFrame: {
+        x: 512,
+        y: 400,
+        width: 930,
+        height: 590,
+        fillColor: 0x120d11,
+        alpha: 0.92,
+        strokeColor: 0x3c261c,
+        strokeWidth: 2,
+        depth: -5,
+    },
 };

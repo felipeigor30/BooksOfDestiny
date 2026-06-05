@@ -85,3 +85,11 @@ export interface LegendLayout {
     y: number;
     items: LegendItemLayout[];
 }
+
+export interface ColoredRectLayout extends RectLayout {
+    fillColor: number;
+    alpha?: number;
+    strokeColor?: number;
+    strokeWidth?: number;
+    depth?: number;
+}

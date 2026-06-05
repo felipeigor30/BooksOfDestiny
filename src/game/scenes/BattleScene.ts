@@ -17,6 +17,7 @@ import {
 } from "../data/arena";
 import {
     P0_ABILITY_PANEL_LAYOUT,
+    P0_BACKGROUND_LAYOUT,
     P0_COMBAT_HUD_LAYOUT,
     P0_GRID_CONFIG,
     P0_ISOMETRIC_CONFIG,
@@ -154,22 +155,19 @@ export class BattleScene extends Scene {
     }
 
     private createBackground(): void {
-        const layout = P0_SCENE_TEXT_LAYOUT;
+        const background = P0_BACKGROUND_LAYOUT;
+        const textLayout = P0_SCENE_TEXT_LAYOUT;
 
-        this.add.rectangle(512, 384, 1024, 768, 0x09070b).setDepth(-10);
-
-        this.add
-            .rectangle(512, 400, 930, 590, 0x120d11, 0.92)
-            .setStrokeStyle(2, 0x3c261c, 1)
-            .setDepth(-5);
+        this.createConfiguredRectangle(background.screen);
+        this.createConfiguredRectangle(background.battleFrame);
 
         this.add.text(
-            layout.prototypeLabel.x,
-            layout.prototypeLabel.y,
-            layout.prototypeLabel.text,
+            textLayout.prototypeLabel.x,
+            textLayout.prototypeLabel.y,
+            textLayout.prototypeLabel.text,
             {
                 fontFamily: "Georgia, serif",
-                fontSize: layout.prototypeLabel.fontSize,
+                fontSize: textLayout.prototypeLabel.fontSize,
                 color: "#7c5a42",
             },
         );
@@ -287,7 +285,40 @@ export class BattleScene extends Scene {
             )
             .setOrigin(1, 0);
     }
+    private createConfiguredRectangle(config: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        fillColor: number;
+        alpha?: number;
+        strokeColor?: number;
+        strokeWidth?: number;
+        depth?: number;
+    }): GameObjects.Rectangle {
+        const rectangle = this.add.rectangle(
+            config.x,
+            config.y,
+            config.width,
+            config.height,
+            config.fillColor,
+            config.alpha ?? 1,
+        );
 
+        if (config.strokeColor !== undefined) {
+            rectangle.setStrokeStyle(
+                config.strokeWidth ?? 1,
+                config.strokeColor,
+                1,
+            );
+        }
+
+        if (config.depth !== undefined) {
+            rectangle.setDepth(config.depth);
+        }
+
+        return rectangle;
+    }
     private createArena(): void {
         for (let row = 0; row < this.rows; row++) {
             for (let column = 0; column < this.columns; column++) {
