@@ -15,6 +15,12 @@ import {
     TileType,
 } from "../data/arena";
 import {
+    P0_GRID_CONFIG,
+    P0_ISOMETRIC_CONFIG,
+    P0_TILE_COLORS,
+    P0_TILE_STYLES,
+} from "../data/battleConfig";
+import {
     ActiveFlameInvocation,
     ArenaTile,
     BurningGroundEffect,
@@ -29,45 +35,31 @@ import {
 } from "../utils/gridUtils";
 
 export class BattleScene extends Scene {
-    private readonly rows = 8;
-    private readonly columns = 8;
+    private readonly rows = P0_GRID_CONFIG.rows;
+    private readonly columns = P0_GRID_CONFIG.columns;
 
-    private readonly tileWidth = 96;
-    private readonly tileHeight = 48;
+    private readonly tileWidth = P0_ISOMETRIC_CONFIG.tileWidth;
+    private readonly tileHeight = P0_ISOMETRIC_CONFIG.tileHeight;
 
-    private readonly arenaOriginX = 512;
-    private readonly arenaOriginY = 184;
+    private readonly arenaOriginX = P0_ISOMETRIC_CONFIG.arenaOriginX;
+    private readonly arenaOriginY = P0_ISOMETRIC_CONFIG.arenaOriginY;
 
-    private readonly tileStrokeColor = 0x6b4730;
-    private readonly hoverColor = 0x80503a;
-    private readonly selectedColor = 0xc45725;
-    private readonly movementColor = 0x315b55;
+    private readonly tileStrokeColor = P0_TILE_COLORS.stroke;
+    private readonly hoverColor = P0_TILE_COLORS.hover;
+    private readonly selectedColor = P0_TILE_COLORS.selected;
+    private readonly movementColor = P0_TILE_COLORS.movement;
 
-    private readonly attackRangeColor = 0x71302a;
-    private readonly attackTargetColor = 0xb54427;
+    private readonly attackRangeColor = P0_TILE_COLORS.attackRange;
+    private readonly attackTargetColor = P0_TILE_COLORS.attackTarget;
+    private readonly explosionRangeColor = P0_TILE_COLORS.explosionRange;
+    private readonly explosionAreaColor = P0_TILE_COLORS.explosionArea;
+    private readonly burningGroundColor = P0_TILE_COLORS.burningGround;
 
-    private readonly explosionRangeColor = 0x67311f;
-    private readonly explosionAreaColor = 0xb34820;
-    private readonly burningGroundColor = 0x6e2619;
-
-    private readonly entityFootOffsetY = 6;
-    private readonly rockFootOffsetY = 2;
+    private readonly entityFootOffsetY = P0_ISOMETRIC_CONFIG.entityFootOffsetY;
+    private readonly rockFootOffsetY = P0_ISOMETRIC_CONFIG.rockFootOffsetY;
     private readonly showDebugTileCoordinates = false;
 
-    private readonly tileStyles: Record<TileType, TileStyle> = {
-        ground: {
-            color: 0x3b2923,
-            label: "Chão comum",
-        },
-        corrupted: {
-            color: 0x401d2b,
-            label: "Terreno corrompido",
-        },
-        rock: {
-            color: 0x26232a,
-            label: "Rocha — movimento bloqueado",
-        },
-    };
+    private readonly tileStyles: Record<TileType, TileStyle> = P0_TILE_STYLES;
 
     private tiles: ArenaTile[] = [];
     private selectedTile?: ArenaTile;
