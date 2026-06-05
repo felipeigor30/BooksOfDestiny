@@ -31,6 +31,7 @@ import {
     ActiveFlameInvocation,
     ArenaTile,
     BurningGroundEffect,
+    ColoredRectLayout,
     EnemyUnit,
     PanelButtonStyle,
     TileStyle,
@@ -152,6 +153,32 @@ export class BattleScene extends Scene {
         this.refreshAllTiles();
 
         EventBus.emit("current-scene-ready", this);
+    }
+    private createConfiguredRectangle(
+        config: ColoredRectLayout,
+    ): GameObjects.Rectangle {
+        const rectangle = this.add.rectangle(
+            config.x,
+            config.y,
+            config.width,
+            config.height,
+            config.fillColor,
+            config.alpha ?? 1,
+        );
+
+        if (config.strokeColor !== undefined) {
+            rectangle.setStrokeStyle(
+                config.strokeWidth ?? 1,
+                config.strokeColor,
+                1,
+            );
+        }
+
+        if (config.depth !== undefined) {
+            rectangle.setDepth(config.depth);
+        }
+
+        return rectangle;
     }
 
     private createBackground(): void {
@@ -285,40 +312,7 @@ export class BattleScene extends Scene {
             )
             .setOrigin(1, 0);
     }
-    private createConfiguredRectangle(config: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        fillColor: number;
-        alpha?: number;
-        strokeColor?: number;
-        strokeWidth?: number;
-        depth?: number;
-    }): GameObjects.Rectangle {
-        const rectangle = this.add.rectangle(
-            config.x,
-            config.y,
-            config.width,
-            config.height,
-            config.fillColor,
-            config.alpha ?? 1,
-        );
 
-        if (config.strokeColor !== undefined) {
-            rectangle.setStrokeStyle(
-                config.strokeWidth ?? 1,
-                config.strokeColor,
-                1,
-            );
-        }
-
-        if (config.depth !== undefined) {
-            rectangle.setDepth(config.depth);
-        }
-
-        return rectangle;
-    }
     private createArena(): void {
         for (let row = 0; row < this.rows; row++) {
             for (let column = 0; column < this.columns; column++) {
