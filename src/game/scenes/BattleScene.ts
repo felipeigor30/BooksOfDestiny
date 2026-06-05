@@ -35,6 +35,11 @@ import {
     isWithinGrid,
 } from "../utils/gridUtils";
 
+interface PanelButton {
+    background: GameObjects.Rectangle;
+    label: GameObjects.Text;
+}
+
 export class BattleScene extends Scene {
     private readonly rows = P0_GRID_CONFIG.rows;
     private readonly columns = P0_GRID_CONFIG.columns;
@@ -606,6 +611,42 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
     }
 
+    private createPanelButton(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        text: string,
+        fontSize: string,
+        onClick: () => void,
+    ): PanelButton {
+        const background = this.add
+            .rectangle(x, y, width, height, 0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        const label = this.add
+            .text(x, y, text, {
+                fontFamily: "Georgia, serif",
+                fontSize,
+                color: "#7e6c60",
+            })
+            .setOrigin(0.5);
+
+        const clickableArea = this.add
+            .container(x, y, [])
+            .setSize(width, height)
+            .setInteractive({ useHandCursor: true });
+
+        clickableArea.on("pointerdown", () => {
+            onClick();
+        });
+
+        return {
+            background,
+            label,
+        };
+    }
+
     private createAbilityPanel(): void {
         this.add
             .rectangle(835, 590, 292, 190, 0x130d0f, 1)
@@ -617,115 +658,70 @@ export class BattleScene extends Scene {
             color: "#d4a45f",
         });
 
-        // Bola de Fogo
-        this.fireballButtonBackground = this.add
-            .rectangle(765, 535, 126, 35, 0x22181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
+        const fireballButton = this.createPanelButton(
+            765,
+            535,
+            126,
+            35,
+            "🔥 Bola de Fogo",
+            "11px",
+            () => this.selectFireball(),
+        );
 
-        this.fireballButtonLabel = this.add
-            .text(765, 535, "🔥 Bola de Fogo", {
-                fontFamily: "Georgia, serif",
-                fontSize: "11px",
-                color: "#7e6c60",
-            })
-            .setOrigin(0.5);
+        this.fireballButtonBackground = fireballButton.background;
+        this.fireballButtonLabel = fireballButton.label;
 
-        const fireballButton = this.add
-            .container(765, 535, [])
-            .setSize(126, 35)
-            .setInteractive({ useHandCursor: true });
+        const shieldButton = this.createPanelButton(
+            905,
+            535,
+            126,
+            35,
+            "🛡 Escudo",
+            "11px",
+            () => this.castIgneousShield(),
+        );
 
-        fireballButton.on("pointerdown", () => {
-            this.selectFireball();
-        });
+        this.shieldButtonBackground = shieldButton.background;
+        this.shieldButtonLabel = shieldButton.label;
 
-        // Escudo Ígneo
-        this.shieldButtonBackground = this.add
-            .rectangle(905, 535, 126, 35, 0x22181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
+        const explosionButton = this.createPanelButton(
+            765,
+            576,
+            126,
+            35,
+            "💥 Explosão",
+            "11px",
+            () => this.selectIgneousExplosion(),
+        );
 
-        this.shieldButtonLabel = this.add
-            .text(905, 535, "🛡 Escudo", {
-                fontFamily: "Georgia, serif",
-                fontSize: "11px",
-                color: "#7e6c60",
-            })
-            .setOrigin(0.5);
+        this.explosionButtonBackground = explosionButton.background;
+        this.explosionButtonLabel = explosionButton.label;
 
-        const shieldButton = this.add
-            .container(905, 535, [])
-            .setSize(126, 35)
-            .setInteractive({ useHandCursor: true });
+        const flameInvocationButton = this.createPanelButton(
+            905,
+            576,
+            126,
+            35,
+            "☄ Invocação",
+            "11px",
+            () => this.selectFlameInvocation(),
+        );
 
-        shieldButton.on("pointerdown", () => {
-            this.castIgneousShield();
-        });
+        this.flameInvocationButtonBackground = flameInvocationButton.background;
+        this.flameInvocationButtonLabel = flameInvocationButton.label;
 
-        // Explosão Ígnea
-        this.explosionButtonBackground = this.add
-            .rectangle(765, 576, 126, 35, 0x22181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
+        const passTurnButton = this.createPanelButton(
+            835,
+            617,
+            266,
+            34,
+            "⏭ Passar Turno",
+            "12px",
+            () => this.passPlayerTurn(),
+        );
 
-        this.explosionButtonLabel = this.add
-            .text(765, 576, "💥 Explosão", {
-                fontFamily: "Georgia, serif",
-                fontSize: "11px",
-                color: "#7e6c60",
-            })
-            .setOrigin(0.5);
-
-        const explosionButton = this.add
-            .container(765, 576, [])
-            .setSize(126, 35)
-            .setInteractive({ useHandCursor: true });
-
-        explosionButton.on("pointerdown", () => {
-            this.selectIgneousExplosion();
-        });
-
-        // Invocação Flamejante
-        this.flameInvocationButtonBackground = this.add
-            .rectangle(905, 576, 126, 35, 0x22181a, 1)
-            .setStrokeStyle(2, 0x4e352a, 1);
-
-        this.flameInvocationButtonLabel = this.add
-            .text(905, 576, "☄ Invocação", {
-                fontFamily: "Georgia, serif",
-                fontSize: "11px",
-                color: "#7e6c60",
-            })
-            .setOrigin(0.5);
-
-        const flameInvocationButton = this.add
-            .container(905, 576, [])
-            .setSize(126, 35)
-            .setInteractive({ useHandCursor: true });
-
-        flameInvocationButton.on("pointerdown", () => {
-            this.selectFlameInvocation();
-        });
-
-        // Passar turno
-        this.passTurnButtonBackground = this.add
-            .rectangle(835, 617, 266, 34, 0x302119, 1)
-            .setStrokeStyle(2, 0x8c5b31, 1);
-
-        this.passTurnButtonLabel = this.add
-            .text(835, 617, "⏭ Passar Turno", {
-                fontFamily: "Georgia, serif",
-                fontSize: "12px",
-                color: "#e5bd78",
-            })
-            .setOrigin(0.5);
-
-        const passTurnButton = this.add
-            .container(835, 617, [])
-            .setSize(266, 34)
-            .setInteractive({ useHandCursor: true });
-
-        passTurnButton.on("pointerdown", () => {
-            this.passPlayerTurn();
-        });
+        this.passTurnButtonBackground = passTurnButton.background;
+        this.passTurnButtonLabel = passTurnButton.label;
 
         this.concentrationText = this.add.text(
             700,
