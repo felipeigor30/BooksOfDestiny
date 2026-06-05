@@ -156,3 +156,42 @@ export const P0_ABILITY_PANEL_LAYOUT: {
         fontSize: "12px",
     },
 };
+export const P0_COMBAT_HUD_LAYOUT = {
+    hpLabel: {
+        x: 82,
+        y: 114,
+        fontSize: "13px",
+    },
+    hpBarBackground: {
+        x: 123,
+        y: 121,
+        width: 142,
+        height: 14,
+    },
+    hpBar: {
+        x: 126,
+        y: 121,
+        width: 136,
+        height: 8,
+    },
+    hpText: {
+        x: 274,
+        y: 114,
+        fontSize: "13px",
+    },
+    shieldLabel: {
+        x: 82,
+        y: 137,
+        fontSize: "12px",
+    },
+    shieldText: {
+        x: 123,
+        y: 137,
+        fontSize: "12px",
+    },
+    roundText: {
+        x: 932,
+        y: 114,
+        fontSize: "14px",
+    },
+} as const;

@@ -17,6 +17,7 @@ import {
 } from "../data/arena";
 import {
     P0_ABILITY_PANEL_LAYOUT,
+    P0_COMBAT_HUD_LAYOUT,
     P0_GRID_CONFIG,
     P0_ISOMETRIC_CONFIG,
     P0_PANEL_BUTTON_STYLES,
@@ -200,58 +201,79 @@ export class BattleScene extends Scene {
     }
 
     private createCombatHud(): void {
-        this.add.text(82, 114, "HP", {
+        const layout = P0_COMBAT_HUD_LAYOUT;
+
+        this.add.text(layout.hpLabel.x, layout.hpLabel.y, "HP", {
             fontFamily: "Georgia, serif",
-            fontSize: "13px",
+            fontSize: layout.hpLabel.fontSize,
             fontStyle: "bold",
             color: "#dfb276",
         });
 
         this.add
-            .rectangle(123, 121, 142, 14, 0x251619, 1)
+            .rectangle(
+                layout.hpBarBackground.x,
+                layout.hpBarBackground.y,
+                layout.hpBarBackground.width,
+                layout.hpBarBackground.height,
+                0x251619,
+                1,
+            )
             .setOrigin(0, 0.5)
             .setStrokeStyle(1, 0x71402e, 1);
 
         this.playerHealthBar = this.add
-            .rectangle(126, 121, 136, 8, 0xb63d32, 1)
+            .rectangle(
+                layout.hpBar.x,
+                layout.hpBar.y,
+                layout.hpBar.width,
+                layout.hpBar.height,
+                0xb63d32,
+                1,
+            )
             .setOrigin(0, 0.5);
 
         this.playerHpText = this.add.text(
-            274,
-            114,
+            layout.hpText.x,
+            layout.hpText.y,
             `${this.playerCurrentHp} / ${this.playerMaxHp}`,
             {
                 fontFamily: "Georgia, serif",
-                fontSize: "13px",
+                fontSize: layout.hpText.fontSize,
                 color: "#e5c79b",
             },
         );
 
-        this.add.text(82, 137, "ESC", {
+        this.add.text(layout.shieldLabel.x, layout.shieldLabel.y, "ESC", {
             fontFamily: "Georgia, serif",
-            fontSize: "12px",
+            fontSize: layout.shieldLabel.fontSize,
             fontStyle: "bold",
             color: "#db9357",
         });
 
         this.playerShieldText = this.add.text(
-            123,
-            137,
+            layout.shieldText.x,
+            layout.shieldText.y,
             `${this.playerShield} / ${IGNEOUS_SHIELD.shieldAbsorption ?? 0}`,
             {
                 fontFamily: "Georgia, serif",
-                fontSize: "12px",
+                fontSize: layout.shieldText.fontSize,
                 color: "#816a5b",
             },
         );
 
         this.roundText = this.add
-            .text(932, 114, `RODADA ${this.round}`, {
-                fontFamily: "Georgia, serif",
-                fontSize: "14px",
-                fontStyle: "bold",
-                color: "#d2753e",
-            })
+            .text(
+                layout.roundText.x,
+                layout.roundText.y,
+                `RODADA ${this.round}`,
+                {
+                    fontFamily: "Georgia, serif",
+                    fontSize: layout.roundText.fontSize,
+                    fontStyle: "bold",
+                    color: "#d2753e",
+                },
+            )
             .setOrigin(1, 0);
     }
 
