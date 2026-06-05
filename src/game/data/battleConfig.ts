@@ -1,5 +1,11 @@
 import type { TileType } from "./arena";
-import type { PanelButtonStyle, TileStyle } from "../types/battle";
+import type {
+    PanelButtonLayout,
+    PanelButtonStyle,
+    RectLayout,
+    TextLayout,
+    TileStyle,
+} from "../types/battle";
 
 export const P0_GRID_CONFIG = {
     rows: 8,
@@ -77,5 +83,76 @@ export const P0_PANEL_BUTTON_STYLES: Record<
         disabledFillColor: 0x21181a,
         disabledStrokeColor: 0x4e352a,
         disabledTextColor: "#71655b",
+    },
+};
+export const P0_ABILITY_PANEL_LAYOUT: {
+    panel: RectLayout;
+    title: TextLayout;
+    buttons: {
+        fireball: PanelButtonLayout;
+        shield: PanelButtonLayout;
+        explosion: PanelButtonLayout;
+        flameInvocation: PanelButtonLayout;
+        passTurn: PanelButtonLayout;
+    };
+    concentrationText: TextLayout;
+} = {
+    panel: {
+        x: 835,
+        y: 590,
+        width: 292,
+        height: 190,
+    },
+    title: {
+        x: 700,
+        y: 502,
+        fontSize: "13px",
+    },
+    buttons: {
+        fireball: {
+            x: 765,
+            y: 535,
+            width: 126,
+            height: 35,
+            label: "🔥 Bola de Fogo",
+            fontSize: "11px",
+        },
+        shield: {
+            x: 905,
+            y: 535,
+            width: 126,
+            height: 35,
+            label: "🛡 Escudo",
+            fontSize: "11px",
+        },
+        explosion: {
+            x: 765,
+            y: 576,
+            width: 126,
+            height: 35,
+            label: "💥 Explosão",
+            fontSize: "11px",
+        },
+        flameInvocation: {
+            x: 905,
+            y: 576,
+            width: 126,
+            height: 35,
+            label: "☄ Invocação",
+            fontSize: "11px",
+        },
+        passTurn: {
+            x: 835,
+            y: 617,
+            width: 266,
+            height: 34,
+            label: "⏭ Passar Turno",
+            fontSize: "12px",
+        },
+    },
+    concentrationText: {
+        x: 700,
+        y: 648,
+        fontSize: "12px",
     },
 };

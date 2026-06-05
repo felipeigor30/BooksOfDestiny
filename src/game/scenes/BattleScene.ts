@@ -16,6 +16,7 @@ import {
     TileType,
 } from "../data/arena";
 import {
+    P0_ABILITY_PANEL_LAYOUT,
     P0_GRID_CONFIG,
     P0_ISOMETRIC_CONFIG,
     P0_PANEL_BUTTON_STYLES,
@@ -641,73 +642,82 @@ export class BattleScene extends Scene {
     }
 
     private createAbilityPanel(): void {
+        const layout = P0_ABILITY_PANEL_LAYOUT;
+
         this.add
-            .rectangle(835, 590, 292, 190, 0x130d0f, 1)
+            .rectangle(
+                layout.panel.x,
+                layout.panel.y,
+                layout.panel.width,
+                layout.panel.height,
+                0x130d0f,
+                1,
+            )
             .setStrokeStyle(2, 0x5c3826, 1);
 
-        this.add.text(700, 502, "GRIMÓRIO", {
+        this.add.text(layout.title.x, layout.title.y, "GRIMÓRIO", {
             fontFamily: "Georgia, serif",
-            fontSize: "13px",
+            fontSize: layout.title.fontSize,
             color: "#d4a45f",
         });
 
         this.fireballButton = this.createPanelButton(
-            765,
-            535,
-            126,
-            35,
-            "🔥 Bola de Fogo",
-            "11px",
+            layout.buttons.fireball.x,
+            layout.buttons.fireball.y,
+            layout.buttons.fireball.width,
+            layout.buttons.fireball.height,
+            layout.buttons.fireball.label,
+            layout.buttons.fireball.fontSize,
             () => this.selectFireball(),
         );
 
         this.shieldButton = this.createPanelButton(
-            905,
-            535,
-            126,
-            35,
-            "🛡 Escudo",
-            "11px",
+            layout.buttons.shield.x,
+            layout.buttons.shield.y,
+            layout.buttons.shield.width,
+            layout.buttons.shield.height,
+            layout.buttons.shield.label,
+            layout.buttons.shield.fontSize,
             () => this.castIgneousShield(),
         );
 
         this.explosionButton = this.createPanelButton(
-            765,
-            576,
-            126,
-            35,
-            "💥 Explosão",
-            "11px",
+            layout.buttons.explosion.x,
+            layout.buttons.explosion.y,
+            layout.buttons.explosion.width,
+            layout.buttons.explosion.height,
+            layout.buttons.explosion.label,
+            layout.buttons.explosion.fontSize,
             () => this.selectIgneousExplosion(),
         );
 
         this.flameInvocationButton = this.createPanelButton(
-            905,
-            576,
-            126,
-            35,
-            "☄ Invocação",
-            "11px",
+            layout.buttons.flameInvocation.x,
+            layout.buttons.flameInvocation.y,
+            layout.buttons.flameInvocation.width,
+            layout.buttons.flameInvocation.height,
+            layout.buttons.flameInvocation.label,
+            layout.buttons.flameInvocation.fontSize,
             () => this.selectFlameInvocation(),
         );
 
         this.passTurnButton = this.createPanelButton(
-            835,
-            617,
-            266,
-            34,
-            "⏭ Passar Turno",
-            "12px",
+            layout.buttons.passTurn.x,
+            layout.buttons.passTurn.y,
+            layout.buttons.passTurn.width,
+            layout.buttons.passTurn.height,
+            layout.buttons.passTurn.label,
+            layout.buttons.passTurn.fontSize,
             () => this.passPlayerTurn(),
         );
 
         this.concentrationText = this.add.text(
-            700,
-            648,
+            layout.concentrationText.x,
+            layout.concentrationText.y,
             `Concentração: ${this.concentration} / 100`,
             {
                 fontFamily: "Georgia, serif",
-                fontSize: "12px",
+                fontSize: layout.concentrationText.fontSize,
                 color: "#bd8560",
             },
         );

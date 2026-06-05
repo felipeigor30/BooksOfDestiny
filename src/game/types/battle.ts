@@ -55,3 +55,21 @@ export interface PanelButtonStyle {
     disabledStrokeColor: number;
     disabledTextColor: string;
 }
+
+export interface RectLayout {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+export interface TextLayout {
+    x: number;
+    y: number;
+    fontSize: string;
+}
+
+export interface PanelButtonLayout extends RectLayout {
+    label: string;
+    fontSize: string;
+}
