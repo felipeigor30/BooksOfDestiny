@@ -19,6 +19,11 @@ export interface AbilityDefinition {
     burnDuration?: number;
 
     shieldAbsorption?: number;
+
+    concentrationCost?: number;
+    areaRadius?: number;
+    burningGroundDamage?: number;
+    burningGroundDuration?: number;
 }
 
 export const FIREBALL: AbilityDefinition = {
@@ -42,4 +47,19 @@ export const IGNEOUS_SHIELD: AbilityDefinition = {
     concentrationGain: 10,
     description: "Cria uma barreira flamejante que absorve dano recebido.",
     shieldAbsorption: 25,
+};
+
+export const IGNEOUS_EXPLOSION: AbilityDefinition = {
+    id: "igneous-explosion",
+    name: "Explosão Ígnea",
+    category: "concentration",
+    range: 3,
+    concentrationGain: 0,
+    concentrationCost: 100,
+    damage: 40,
+    areaRadius: 1,
+    burningGroundDamage: 6,
+    burningGroundDuration: 2,
+    description:
+        "Provoca uma explosão flamejante em uma área 3x3 e incendeia o terreno.",
 };

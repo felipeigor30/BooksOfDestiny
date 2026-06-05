@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
-import { FIREBALL, IGNEOUS_SHIELD } from "../data/abilities";
+import { FIREBALL, IGNEOUS_SHIELD, IGNEOUS_EXPLOSION } from "../data/abilities";
 import {
     GridPosition,
     INITIAL_ENEMIES,
@@ -37,6 +37,13 @@ interface EnemyUnit {
     burnMarker?: GameObjects.Text;
 }
 
+interface BurningGroundEffect {
+    key: string;
+    remainingRounds: number;
+    damage: number;
+    marker: GameObjects.Text;
+}
+
 interface TileStyle {
     color: number;
     label: string;
@@ -59,6 +66,10 @@ export class BattleScene extends Scene {
 
     private readonly attackRangeColor = 0x71302a;
     private readonly attackTargetColor = 0xb54427;
+
+    private readonly explosionRangeColor = 0x67311f;
+    private readonly explosionAreaColor = 0xb34820;
+    private readonly burningGroundColor = 0x6e2619;
 
     private readonly entityFootOffsetY = 6;
     private readonly rockFootOffsetY = 2;
@@ -110,7 +121,13 @@ export class BattleScene extends Scene {
     private reachableTileKeys = new Set<string>();
     private attackTileKeys = new Set<string>();
 
-    private concentration = 0;
+    private explosionTargetingMode = false;
+    private explosionTargetTileKeys = new Set<string>();
+    private explosionAreaPreviewTileKeys = new Set<string>();
+
+    private burningGroundEffects = new Map<string, BurningGroundEffect>();
+
+    private concentration = 100;
 
     private coordinateText!: GameObjects.Text;
     private instructionText!: GameObjects.Text;
@@ -123,6 +140,9 @@ export class BattleScene extends Scene {
 
     private shieldButtonBackground!: GameObjects.Rectangle;
     private shieldButtonLabel!: GameObjects.Text;
+
+    private explosionButtonBackground!: GameObjects.Rectangle;
+    private explosionButtonLabel!: GameObjects.Text;
 
     private passTurnButtonBackground!: GameObjects.Rectangle;
     private passTurnButtonLabel!: GameObjects.Text;
@@ -285,15 +305,28 @@ export class BattleScene extends Scene {
                 };
 
                 tilePolygon.on("pointerover", () => {
+                    if (
+                        this.explosionTargetingMode &&
+                        this.isExplosionTargetTile(tile)
+                    ) {
+                        this.previewExplosionArea(tile);
+                        return;
+                    }
+
                     if (!this.isSelected(tile) && !this.isReachable(tile)) {
                         tilePolygon.setFillStyle(this.hoverColor, 1);
                     }
                 });
 
                 tilePolygon.on("pointerout", () => {
+                    if (this.explosionTargetingMode) {
+                        this.explosionAreaPreviewTileKeys.clear();
+                        this.refreshAllTiles();
+                        return;
+                    }
+
                     this.refreshTileAppearance(tile);
                 });
-
                 tilePolygon.on("pointerdown", () => {
                     this.handleTileClick(tile);
                 });
@@ -305,6 +338,51 @@ export class BattleScene extends Scene {
         }
     }
 
+    private previewExplosionArea(centerTile: ArenaTile): void {
+        const radius = IGNEOUS_EXPLOSION.areaRadius ?? 1;
+
+        this.explosionAreaPreviewTileKeys = this.calculateAreaTiles(
+            centerTile.row,
+            centerTile.column,
+            radius,
+        );
+
+        this.refreshAllTiles();
+    }
+
+    private calculateAreaTiles(
+        centerRow: number,
+        centerColumn: number,
+        radius: number,
+    ): Set<string> {
+        const areaTiles = new Set<string>();
+
+        for (let row = centerRow - radius; row <= centerRow + radius; row++) {
+            for (
+                let column = centerColumn - radius;
+                column <= centerColumn + radius;
+                column++
+            ) {
+                if (!this.isWithinArena(row, column)) {
+                    continue;
+                }
+
+                if (P0_ARENA_MAP[row][column] === "rock") {
+                    continue;
+                }
+
+                areaTiles.add(this.getPositionKey(row, column));
+            }
+        }
+
+        return areaTiles;
+    }
+
+    private isInExplosionPreview(tile: ArenaTile): boolean {
+        return this.explosionAreaPreviewTileKeys.has(
+            this.getPositionKey(tile.row, tile.column),
+        );
+    }
     private createTerrainDecoration(tile: ArenaTile): void {
         const center = this.getTileCenter(tile.row, tile.column);
         const foot = this.getTileFootPosition(
@@ -511,10 +589,10 @@ export class BattleScene extends Scene {
 
     private createAbilityPanel(): void {
         this.add
-            .rectangle(835, 588, 252, 186, 0x130d0f, 1)
+            .rectangle(835, 590, 280, 150, 0x130d0f, 1)
             .setStrokeStyle(2, 0x5c3826, 1);
 
-        this.add.text(718, 504, "GRIMÓRIO", {
+        this.add.text(707, 520, "GRIMÓRIO", {
             fontFamily: "Georgia, serif",
             fontSize: "13px",
             color: "#d4a45f",
@@ -522,20 +600,20 @@ export class BattleScene extends Scene {
 
         // Bola de Fogo
         this.fireballButtonBackground = this.add
-            .rectangle(782, 538, 142, 38, 0x22181a, 1)
+            .rectangle(770, 553, 122, 37, 0x22181a, 1)
             .setStrokeStyle(2, 0x4e352a, 1);
 
         this.fireballButtonLabel = this.add
-            .text(782, 538, "🔥 Bola de Fogo", {
+            .text(770, 553, "🔥 Bola de Fogo", {
                 fontFamily: "Georgia, serif",
-                fontSize: "13px",
+                fontSize: "12px",
                 color: "#7e6c60",
             })
             .setOrigin(0.5);
 
         const fireballButton = this.add
-            .container(782, 538, [])
-            .setSize(142, 38)
+            .container(770, 553, [])
+            .setSize(122, 37)
             .setInteractive({ useHandCursor: true });
 
         fireballButton.on("pointerdown", () => {
@@ -544,42 +622,64 @@ export class BattleScene extends Scene {
 
         // Escudo Ígneo
         this.shieldButtonBackground = this.add
-            .rectangle(782, 581, 142, 38, 0x22181a, 1)
+            .rectangle(900, 553, 122, 37, 0x22181a, 1)
             .setStrokeStyle(2, 0x4e352a, 1);
 
         this.shieldButtonLabel = this.add
-            .text(782, 581, "🛡 Escudo Ígneo", {
+            .text(900, 553, "🛡 Escudo Ígneo", {
                 fontFamily: "Georgia, serif",
-                fontSize: "13px",
+                fontSize: "11px",
                 color: "#7e6c60",
             })
             .setOrigin(0.5);
 
         const shieldButton = this.add
-            .container(782, 581, [])
-            .setSize(142, 38)
+            .container(900, 553, [])
+            .setSize(122, 37)
             .setInteractive({ useHandCursor: true });
 
         shieldButton.on("pointerdown", () => {
             this.castIgneousShield();
         });
 
-        // Passar Turno
+        // Explosão Ígnea
+        this.explosionButtonBackground = this.add
+            .rectangle(770, 597, 122, 37, 0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.explosionButtonLabel = this.add
+            .text(770, 597, "💥 Explosão", {
+                fontFamily: "Georgia, serif",
+                fontSize: "12px",
+                color: "#7e6c60",
+            })
+            .setOrigin(0.5);
+
+        const explosionButton = this.add
+            .container(770, 597, [])
+            .setSize(122, 37)
+            .setInteractive({ useHandCursor: true });
+
+        explosionButton.on("pointerdown", () => {
+            this.selectIgneousExplosion();
+        });
+
+        // Passar turno
         this.passTurnButtonBackground = this.add
-            .rectangle(782, 624, 142, 34, 0x302119, 1)
+            .rectangle(900, 597, 122, 37, 0x302119, 1)
             .setStrokeStyle(2, 0x8c5b31, 1);
 
         this.passTurnButtonLabel = this.add
-            .text(782, 624, "⏭ Passar Turno", {
+            .text(900, 597, "⏭ Passar Turno", {
                 fontFamily: "Georgia, serif",
-                fontSize: "12px",
+                fontSize: "11px",
                 color: "#e5bd78",
             })
             .setOrigin(0.5);
 
         const passTurnButton = this.add
-            .container(782, 624, [])
-            .setSize(142, 34)
+            .container(900, 597, [])
+            .setSize(122, 37)
             .setInteractive({ useHandCursor: true });
 
         passTurnButton.on("pointerdown", () => {
@@ -587,9 +687,9 @@ export class BattleScene extends Scene {
         });
 
         this.concentrationText = this.add.text(
-            718,
-            654,
-            "Concentração: 0 / 100",
+            707,
+            632,
+            `Concentração: ${this.concentration} / 100`,
             {
                 fontFamily: "Georgia, serif",
                 fontSize: "12px",
@@ -599,6 +699,7 @@ export class BattleScene extends Scene {
 
         this.setFireballButtonEnabled(true);
         this.setShieldButtonEnabled(true);
+        this.setExplosionButtonEnabled(false);
         this.setPassTurnButtonEnabled(true);
     }
 
@@ -664,6 +765,10 @@ export class BattleScene extends Scene {
         this.movementMode = true;
         this.selectedTile = undefined;
 
+        this.explosionTargetingMode = false;
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
+
         this.reachableTileKeys = this.calculateReachableTiles(
             this.playerPosition,
             PLAYER_MOVEMENT_RANGE,
@@ -686,6 +791,11 @@ export class BattleScene extends Scene {
 
     private handleTileClick(tile: ArenaTile): void {
         if (this.enemyTurnInProgress || this.battleEnded) {
+            return;
+        }
+
+        if (this.explosionTargetingMode) {
+            this.tryCastIgneousExplosionOnTile(tile);
             return;
         }
 
@@ -865,6 +975,34 @@ export class BattleScene extends Scene {
         this.shieldButtonLabel.setColor("#7e6c60");
     }
 
+    private setExplosionButtonEnabled(enabled: boolean): void {
+        if (enabled) {
+            this.explosionButtonBackground
+                .setFillStyle(0x65241a, 1)
+                .setStrokeStyle(2, 0xf08a35, 1);
+
+            this.explosionButtonLabel.setColor("#ffd07d");
+            return;
+        }
+
+        this.explosionButtonBackground
+            .setFillStyle(0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.explosionButtonLabel.setColor("#71655b");
+    }
+
+    private updateExplosionAvailability(): void {
+        const cost = IGNEOUS_EXPLOSION.concentrationCost ?? 100;
+
+        const canUseExplosion =
+            this.canChooseAbility &&
+            !this.enemyTurnInProgress &&
+            !this.battleEnded &&
+            this.concentration >= cost;
+
+        this.setExplosionButtonEnabled(canUseExplosion);
+    }
     private setPassTurnButtonEnabled(enabled: boolean): void {
         if (enabled) {
             this.passTurnButtonBackground
@@ -945,6 +1083,84 @@ export class BattleScene extends Scene {
         );
     }
 
+    private selectIgneousExplosion(): void {
+        if (this.enemyTurnInProgress || this.battleEnded) {
+            return;
+        }
+
+        if (this.explosionTargetingMode) {
+            this.cancelAbilitySelection();
+            return;
+        }
+
+        const cost = IGNEOUS_EXPLOSION.concentrationCost ?? 100;
+
+        if (!this.canChooseAbility) {
+            this.statusText.setText("Você já realizou sua ação nesta rodada");
+            return;
+        }
+
+        if (this.concentration < cost) {
+            this.statusText.setText(
+                `Concentração insuficiente — necessário: ${cost}/100`,
+            );
+            return;
+        }
+
+        this.movementMode = false;
+        this.fireballTargetingMode = false;
+
+        this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
+
+        this.explosionTargetingMode = true;
+        this.explosionTargetTileKeys = this.calculateExplosionTargetRange(
+            this.playerPosition,
+            IGNEOUS_EXPLOSION.range,
+        );
+
+        this.refreshAllTiles();
+
+        this.instructionText.setText(
+            "Explosão Ígnea selecionada — escolha o centro da área de impacto",
+        );
+
+        this.statusText.setText(
+            "Área: 3x3 | Dano: 40 | Terreno incendiado: 2 rodadas",
+        );
+    }
+
+    private calculateExplosionTargetRange(
+        start: GridPosition,
+        range: number,
+    ): Set<string> {
+        const targetTiles = new Set<string>();
+
+        for (let row = 0; row < this.rows; row++) {
+            for (let column = 0; column < this.columns; column++) {
+                const distance =
+                    Math.abs(start.row - row) + Math.abs(start.column - column);
+
+                if (distance > range) {
+                    continue;
+                }
+
+                if (P0_ARENA_MAP[row][column] === "rock") {
+                    continue;
+                }
+
+                targetTiles.add(this.getPositionKey(row, column));
+            }
+        }
+
+        return targetTiles;
+    }
+
+    private isExplosionTargetTile(tile: ArenaTile): boolean {
+        return this.explosionTargetTileKeys.has(
+            this.getPositionKey(tile.row, tile.column),
+        );
+    }
     private castIgneousShield(): void {
         if (this.enemyTurnInProgress || this.battleEnded) {
             return;
@@ -965,6 +1181,10 @@ export class BattleScene extends Scene {
 
         this.fireballTargetingMode = false;
         this.attackTileKeys.clear();
+
+        this.explosionTargetingMode = false;
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
 
         this.playerShield = absorption;
 
@@ -1040,7 +1260,11 @@ export class BattleScene extends Scene {
 
     private cancelAbilitySelection(): void {
         this.fireballTargetingMode = false;
+        this.explosionTargetingMode = false;
+
         this.attackTileKeys.clear();
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
 
         this.refreshAllTiles();
 
@@ -1077,6 +1301,10 @@ export class BattleScene extends Scene {
         this.movementAvailable = false;
         this.canChooseAbility = false;
         this.fireballTargetingMode = false;
+
+        this.explosionTargetingMode = false;
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
 
         this.reachableTileKeys.clear();
         this.attackTileKeys.clear();
@@ -1230,6 +1458,8 @@ export class BattleScene extends Scene {
             `Concentração: ${this.concentration} / 100`,
         );
 
+        this.updateExplosionAvailability();
+
         if (enemy.defeated) {
             this.coordinateText.setText(
                 `${enemy.name} foi derrotado por ${FIREBALL.name}!`,
@@ -1292,12 +1522,15 @@ export class BattleScene extends Scene {
         this.canChooseAbility = false;
         this.movementMode = false;
         this.fireballTargetingMode = false;
-
+        this.explosionTargetingMode = false;
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
         this.reachableTileKeys.clear();
         this.attackTileKeys.clear();
 
         this.setFireballButtonEnabled(false);
         this.setShieldButtonEnabled(false);
+        this.setExplosionButtonEnabled(false);
         this.setPassTurnButtonEnabled(false);
         this.refreshAllTiles();
 
@@ -1330,12 +1563,15 @@ export class BattleScene extends Scene {
         this.canChooseAbility = false;
         this.fireballTargetingMode = false;
         this.enemyTurnInProgress = true;
-
+        this.explosionTargetingMode = false;
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
         this.reachableTileKeys.clear();
         this.attackTileKeys.clear();
 
         this.setFireballButtonEnabled(false);
         this.setShieldButtonEnabled(false);
+        this.setExplosionButtonEnabled(false);
         this.setPassTurnButtonEnabled(false);
         this.refreshAllTiles();
 
@@ -1374,7 +1610,7 @@ export class BattleScene extends Scene {
             return;
         }
 
-        this.applyBurnAtStartOfEnemyTurn(enemy, () => {
+        this.applyBurningGroundDamage(enemy, () => {
             if (this.battleEnded) {
                 return;
             }
@@ -1387,9 +1623,77 @@ export class BattleScene extends Scene {
                 return;
             }
 
-            this.performEnemyAction(enemy, activeEnemies, index);
+            this.applyBurnAtStartOfEnemyTurn(enemy, () => {
+                if (this.battleEnded) {
+                    return;
+                }
+
+                if (enemy.defeated) {
+                    this.time.delayedCall(350, () => {
+                        this.executeEnemyAction(activeEnemies, index + 1);
+                    });
+
+                    return;
+                }
+
+                this.performEnemyAction(enemy, activeEnemies, index);
+            });
         });
     }
+
+    private applyBurningGroundDamage(
+        enemy: EnemyUnit,
+        onComplete: () => void,
+    ): void {
+        const key = this.getPositionKey(
+            enemy.position.row,
+            enemy.position.column,
+        );
+
+        const burningGround = this.burningGroundEffects.get(key);
+
+        if (!burningGround || enemy.defeated) {
+            onComplete();
+            return;
+        }
+
+        this.damageEnemy(enemy, burningGround.damage);
+
+        this.showFloatingDamage(enemy, `-${burningGround.damage} ♨`, "#ff6329");
+
+        if (enemy.defeated) {
+            this.coordinateText.setText(
+                `${enemy.name} foi derrotado pelas chamas do terreno!`,
+            );
+
+            if (this.areAllEnemiesDefeated()) {
+                this.time.delayedCall(500, () => {
+                    this.finishBattle(true);
+                });
+
+                return;
+            }
+
+            this.time.delayedCall(500, () => {
+                onComplete();
+            });
+
+            return;
+        }
+
+        this.coordinateText.setText(
+            `${enemy.name} sofreu ${burningGround.damage} de dano pelo terreno incendiado`,
+        );
+
+        this.statusText.setText(
+            `Chamas do terreno atingiram ${enemy.name}: ${enemy.currentHp}/${enemy.maxHp} HP`,
+        );
+
+        this.time.delayedCall(500, () => {
+            onComplete();
+        });
+    }
+
     private performEnemyAction(
         enemy: EnemyUnit,
         activeEnemies: EnemyUnit[],
@@ -1563,7 +1867,10 @@ export class BattleScene extends Scene {
             },
             onComplete: () => {
                 this.refreshAllTiles();
-                onComplete();
+
+                this.applyBurningGroundDamage(enemy, () => {
+                    onComplete();
+                });
             },
         });
 
@@ -1743,6 +2050,8 @@ export class BattleScene extends Scene {
             this.removePlayerShield();
         }
 
+        this.advanceBurningGroundEffects();
+
         this.round += 1;
         this.roundText.setText(`RODADA ${this.round}`);
 
@@ -1757,6 +2066,7 @@ export class BattleScene extends Scene {
 
         this.setFireballButtonEnabled(true);
         this.setShieldButtonEnabled(true);
+        this.updateExplosionAvailability();
         this.setPassTurnButtonEnabled(true);
         this.refreshAllTiles();
 
@@ -1769,6 +2079,21 @@ export class BattleScene extends Scene {
         );
 
         this.statusText.setText(`Rodada ${this.round} — Turno do Jogador`);
+    }
+
+    private advanceBurningGroundEffects(): void {
+        for (const [key, effect] of this.burningGroundEffects.entries()) {
+            effect.remainingRounds -= 1;
+
+            if (effect.remainingRounds > 0) {
+                continue;
+            }
+
+            effect.marker.destroy();
+            this.burningGroundEffects.delete(key);
+        }
+
+        this.refreshAllTiles();
     }
 
     private selectTile(tile: ArenaTile): void {
@@ -1815,6 +2140,7 @@ export class BattleScene extends Scene {
 
         this.setFireballButtonEnabled(true);
         this.setShieldButtonEnabled(true);
+        this.updateExplosionAvailability();
         this.refreshAllTiles();
 
         this.coordinateText.setText(
@@ -1926,6 +2252,16 @@ export class BattleScene extends Scene {
             return;
         }
 
+        if (this.isInExplosionPreview(tile)) {
+            tile.polygon.setFillStyle(this.explosionAreaColor, 1);
+            return;
+        }
+
+        if (this.explosionTargetingMode && this.isExplosionTargetTile(tile)) {
+            tile.polygon.setFillStyle(this.explosionRangeColor, 1);
+            return;
+        }
+
         if (this.isWithinAttackRange(tile)) {
             if (this.isEnemyOnTile(tile)) {
                 tile.polygon.setFillStyle(this.attackTargetColor, 1);
@@ -1941,7 +2277,204 @@ export class BattleScene extends Scene {
             return;
         }
 
+        if (this.isBurningGroundTile(tile)) {
+            tile.polygon.setFillStyle(this.burningGroundColor, 1);
+            return;
+        }
+
         tile.polygon.setFillStyle(tile.baseColor, 1);
+    }
+
+    private tryCastIgneousExplosionOnTile(tile: ArenaTile): void {
+        if (!this.isExplosionTargetTile(tile)) {
+            this.coordinateText.setText(
+                "Essa casa está fora do alcance da Explosão Ígnea",
+            );
+            return;
+        }
+
+        this.castIgneousExplosion(tile);
+    }
+
+    private castIgneousExplosion(centerTile: ArenaTile): void {
+        const cost = IGNEOUS_EXPLOSION.concentrationCost ?? 100;
+        const radius = IGNEOUS_EXPLOSION.areaRadius ?? 1;
+
+        this.concentration = Math.max(0, this.concentration - cost);
+
+        this.concentrationText.setText(
+            `Concentração: ${this.concentration} / 100`,
+        );
+
+        this.explosionTargetingMode = false;
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
+
+        const affectedTileKeys = this.calculateAreaTiles(
+            centerTile.row,
+            centerTile.column,
+            radius,
+        );
+
+        const position = this.getTileCenter(centerTile.row, centerTile.column);
+
+        const impact = this.add
+            .circle(position.x, position.y, 10, 0xff731c, 0.75)
+            .setStrokeStyle(3, 0xffc34d, 1)
+            .setDepth(3000);
+
+        this.tweens.add({
+            targets: impact,
+            scale: 5,
+            alpha: 0,
+            duration: 430,
+            ease: "Power2",
+            onComplete: () => {
+                impact.destroy();
+                this.resolveIgneousExplosion(affectedTileKeys);
+            },
+        });
+
+        this.instructionText.setText("O Cavaleiro conjurou Explosão Ígnea!");
+
+        this.statusText.setText(
+            "As chamas estão consumindo a área selecionada",
+        );
+    }
+
+    private resolveIgneousExplosion(affectedTileKeys: Set<string>): void {
+        const damage = IGNEOUS_EXPLOSION.damage ?? 0;
+
+        let enemiesHit = 0;
+
+        for (const enemy of this.enemies) {
+            if (enemy.defeated) {
+                continue;
+            }
+
+            const enemyKey = this.getPositionKey(
+                enemy.position.row,
+                enemy.position.column,
+            );
+
+            if (!affectedTileKeys.has(enemyKey)) {
+                continue;
+            }
+
+            this.damageEnemy(enemy, damage);
+            this.showFloatingDamage(enemy, `-${damage}`, "#ffb03d");
+
+            enemiesHit += 1;
+        }
+
+        for (const key of affectedTileKeys) {
+            const tile = this.getTileByKey(key);
+
+            if (!tile || tile.type === "rock") {
+                continue;
+            }
+
+            this.igniteGroundTile(tile);
+        }
+
+        this.refreshAllTiles();
+
+        if (this.areAllEnemiesDefeated()) {
+            this.coordinateText.setText(
+                "Explosão Ígnea derrotou todos os inimigos!",
+            );
+
+            this.finishBattle(true);
+            return;
+        }
+
+        if (enemiesHit > 0) {
+            this.coordinateText.setText(
+                `Explosão Ígnea atingiu ${enemiesHit} inimigo(s) e incendiou o terreno`,
+            );
+        } else {
+            this.coordinateText.setText(
+                "Explosão Ígnea incendiou o terreno, mas não atingiu inimigos",
+            );
+        }
+
+        this.finishPlayerTurn();
+    }
+
+    private showFloatingDamage(
+        enemy: EnemyUnit,
+        text: string,
+        color: string,
+    ): void {
+        const damageText = this.add
+            .text(enemy.marker.x, enemy.marker.y - 78, text, {
+                fontFamily: "Georgia, serif",
+                fontSize: "17px",
+                fontStyle: "bold",
+                color,
+                stroke: "#32130d",
+                strokeThickness: 3,
+            })
+            .setOrigin(0.5)
+            .setDepth(4000);
+
+        this.tweens.add({
+            targets: damageText,
+            y: damageText.y - 24,
+            alpha: 0,
+            duration: 650,
+            ease: "Power2",
+            onComplete: () => {
+                damageText.destroy();
+            },
+        });
+    }
+
+    private igniteGroundTile(tile: ArenaTile): void {
+        const key = this.getPositionKey(tile.row, tile.column);
+        const duration = IGNEOUS_EXPLOSION.burningGroundDuration ?? 2;
+        const damage = IGNEOUS_EXPLOSION.burningGroundDamage ?? 6;
+
+        const existingEffect = this.burningGroundEffects.get(key);
+
+        if (existingEffect) {
+            existingEffect.remainingRounds = duration;
+            existingEffect.damage = damage;
+            return;
+        }
+
+        const position = this.getTileCenter(tile.row, tile.column);
+
+        const marker = this.add
+            .text(position.x, position.y, "♨", {
+                fontFamily: "Georgia, serif",
+                fontSize: "22px",
+                fontStyle: "bold",
+                color: "#ff6527",
+                stroke: "#3b130d",
+                strokeThickness: 3,
+            })
+            .setOrigin(0.5)
+            .setDepth(position.y + 3);
+
+        this.burningGroundEffects.set(key, {
+            key,
+            remainingRounds: duration,
+            damage,
+            marker,
+        });
+    }
+
+    private getTileByKey(key: string): ArenaTile | undefined {
+        return this.tiles.find(
+            (tile) => this.getPositionKey(tile.row, tile.column) === key,
+        );
+    }
+
+    private isBurningGroundTile(tile: ArenaTile): boolean {
+        return this.burningGroundEffects.has(
+            this.getPositionKey(tile.row, tile.column),
+        );
     }
 
     private isSelected(tile: ArenaTile): boolean {
