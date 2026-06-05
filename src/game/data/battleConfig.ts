@@ -276,6 +276,11 @@ export const P0_LEGEND_LAYOUT: LegendLayout = {
             label: "L Lobo",
             color: "#e6817d",
         },
+        {
+            x: 870,
+            label: "A Alpha",
+            color: "#d44c4c",
+        },
     ],
 };
 

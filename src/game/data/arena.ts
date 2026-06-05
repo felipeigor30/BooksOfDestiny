@@ -137,4 +137,16 @@ export const INITIAL_ENEMIES: InitialEnemy[] = [
             column: 6,
         },
     },
+    {
+        id: "alpha-corrupted",
+        name: "Alpha Corrompido",
+        symbol: "A",
+        maxHp: 160,
+        damage: 18,
+        movementRange: 2,
+        position: {
+            row: 0,
+            column: 7,
+        },
+    },
 ];
