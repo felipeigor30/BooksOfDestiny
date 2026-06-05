@@ -21,6 +21,12 @@ import {
     EnemyUnit,
     TileStyle,
 } from "../types/battle";
+import {
+    calculateSquareAreaKeys,
+    getManhattanDistance,
+    getPositionKey,
+    isWithinGrid,
+} from "../utils/gridUtils";
 
 export class BattleScene extends Scene {
     private readonly rows = 8;
@@ -369,32 +375,25 @@ export class BattleScene extends Scene {
             this.getPositionKey(tile.row, tile.column),
         );
     }
+
     private calculateAreaTiles(
         centerRow: number,
         centerColumn: number,
         radius: number,
     ): Set<string> {
-        const areaTiles = new Set<string>();
-
-        for (let row = centerRow - radius; row <= centerRow + radius; row++) {
-            for (
-                let column = centerColumn - radius;
-                column <= centerColumn + radius;
-                column++
-            ) {
-                if (!this.isWithinArena(row, column)) {
-                    continue;
-                }
-
-                if (P0_ARENA_MAP[row][column] === "rock") {
-                    continue;
-                }
-
-                areaTiles.add(this.getPositionKey(row, column));
-            }
-        }
-
-        return areaTiles;
+        return calculateSquareAreaKeys({
+            center: {
+                row: centerRow,
+                column: centerColumn,
+            },
+            radius,
+            gridSize: {
+                rows: this.rows,
+                columns: this.columns,
+            },
+            isBlocked: (position) =>
+                P0_ARENA_MAP[position.row][position.column] === "rock",
+        });
     }
 
     private isInExplosionPreview(tile: ArenaTile): boolean {
@@ -1338,8 +1337,10 @@ export class BattleScene extends Scene {
 
         for (let row = 0; row < this.rows; row++) {
             for (let column = 0; column < this.columns; column++) {
-                const distance =
-                    Math.abs(start.row - row) + Math.abs(start.column - column);
+                const distance = getManhattanDistance(start, {
+                    row,
+                    column,
+                });
 
                 if (distance > range) {
                     continue;
@@ -1538,8 +1539,10 @@ export class BattleScene extends Scene {
 
         for (let row = 0; row < this.rows; row++) {
             for (let column = 0; column < this.columns; column++) {
-                const distance =
-                    Math.abs(start.row - row) + Math.abs(start.column - column);
+                const distance = getManhattanDistance(start, {
+                    row,
+                    column,
+                });
 
                 if (distance === 0 || distance > range) {
                     continue;
@@ -2178,9 +2181,7 @@ export class BattleScene extends Scene {
     }
 
     private isAdjacentToPlayer(position: GridPosition): boolean {
-        const distance =
-            Math.abs(position.row - this.playerPosition.row) +
-            Math.abs(position.column - this.playerPosition.column);
+        const distance = getManhattanDistance(position, this.playerPosition);
 
         return distance === 1;
     }
@@ -2929,12 +2930,19 @@ export class BattleScene extends Scene {
     }
 
     private getPositionKey(row: number, column: number): string {
-        return `${row}:${column}`;
+        return getPositionKey(row, column);
     }
 
     private isWithinArena(row: number, column: number): boolean {
-        return (
-            row >= 0 && row < this.rows && column >= 0 && column < this.columns
+        return isWithinGrid(
+            {
+                row,
+                column,
+            },
+            {
+                rows: this.rows,
+                columns: this.columns,
+            },
         );
     }
 
