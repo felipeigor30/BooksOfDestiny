@@ -14,52 +14,13 @@ import {
     PLAYER_MOVEMENT_RANGE,
     TileType,
 } from "../data/arena";
-
-interface ArenaTile {
-    row: number;
-    column: number;
-    type: TileType;
-    baseColor: number;
-    polygon: GameObjects.Polygon;
-    decoration?: GameObjects.GameObject;
-}
-
-interface EnemyUnit {
-    id: string;
-    name: string;
-    symbol: string;
-    maxHp: number;
-    currentHp: number;
-    damage: number;
-    movementRange: number;
-    position: GridPosition;
-    marker: GameObjects.Container;
-    healthBar: GameObjects.Rectangle;
-    defeated: boolean;
-
-    burningRounds: number;
-    burnDamage: number;
-    burnMarker?: GameObjects.Text;
-}
-
-interface BurningGroundEffect {
-    key: string;
-    remainingRounds: number;
-    damage: number;
-    marker: GameObjects.Text;
-}
-
-interface ActiveFlameInvocation {
-    center: GridPosition;
-    remainingTurns: number;
-    areaTileKeys: Set<string>;
-    marker: GameObjects.Text;
-}
-
-interface TileStyle {
-    color: number;
-    label: string;
-}
+import {
+    ActiveFlameInvocation,
+    ArenaTile,
+    BurningGroundEffect,
+    EnemyUnit,
+    TileStyle,
+} from "../types/battle";
 
 export class BattleScene extends Scene {
     private readonly rows = 8;
