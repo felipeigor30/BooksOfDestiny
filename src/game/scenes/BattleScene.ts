@@ -105,7 +105,7 @@ export class BattleScene extends Scene {
 
     private burningGroundEffects = new Map<string, BurningGroundEffect>();
 
-    private concentration = 100;
+    private concentration = 0;
 
     private coordinateText!: GameObjects.Text;
     private instructionText!: GameObjects.Text;
