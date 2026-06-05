@@ -390,3 +390,45 @@ export const P0_UNIT_MARKER_CONFIG = {
         depthOffset: 50,
     },
 } as const;
+export const P0_TERRAIN_DECORATION_CONFIG = {
+    rock: {
+        shadow: {
+            x: 0,
+            y: 3,
+            width: 46,
+            height: 15,
+            fillColor: 0x09080b,
+            alpha: 0.65,
+        },
+        body: {
+            x: 0,
+            y: -14,
+            points: [2, 32, 8, 15, 18, 4, 30, 0, 42, 14, 45, 32],
+            fillColor: 0x514850,
+            strokeWidth: 2,
+            strokeColor: 0x28232a,
+            originX: 0.5,
+            originY: 1,
+        },
+        light: {
+            x: -5,
+            y: -19,
+            points: [0, 18, 5, 6, 14, 0, 21, 8, 12, 12],
+            fillColor: 0x766b67,
+            alpha: 0.9,
+            originX: 0.5,
+            originY: 1,
+        },
+        depthOffset: 36,
+    },
+    corruption: {
+        symbol: "✦",
+        yOffset: 0,
+        fontFamily: "Georgia, serif",
+        fontSize: "20px",
+        color: "#b53e45",
+        stroke: "#251018",
+        strokeThickness: 3,
+        depthOffset: 1,
+    },
+} as const;

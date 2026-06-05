@@ -24,6 +24,7 @@ import {
     P0_LEGEND_LAYOUT,
     P0_PANEL_BUTTON_STYLES,
     P0_SCENE_TEXT_LAYOUT,
+    P0_TERRAIN_DECORATION_CONFIG,
     P0_TILE_COLORS,
     P0_TILE_STYLES,
     P0_UNIT_MARKER_CONFIG,
@@ -460,6 +461,7 @@ export class BattleScene extends Scene {
             this.getPositionKey(tile.row, tile.column),
         );
     }
+
     private createTerrainDecoration(tile: ArenaTile): void {
         const center = this.getTileCenter(tile.row, tile.column);
         const foot = this.getTileFootPosition(
@@ -467,53 +469,75 @@ export class BattleScene extends Scene {
             tile.column,
             this.rockFootOffsetY,
         );
+
         if (tile.type === "rock") {
-            const rockShadow = this.add.ellipse(0, 3, 46, 15, 0x09080b, 0.65);
-
-            const rockBody = this.add
-                .polygon(
-                    0,
-                    -14,
-                    [2, 32, 8, 15, 18, 4, 30, 0, 42, 14, 45, 32],
-                    0x514850,
-                    1,
-                )
-                .setOrigin(0.5, 1)
-                .setStrokeStyle(2, 0x28232a, 1);
-
-            const rockLight = this.add
-                .polygon(
-                    -5,
-                    -19,
-                    [0, 18, 5, 6, 14, 0, 21, 8, 12, 12],
-                    0x766b67,
-                    0.9,
-                )
-                .setOrigin(0.5, 1);
-
-            const rock = this.add
-                .container(foot.x, foot.y, [rockShadow, rockBody, rockLight])
-                .setDepth(foot.y + 36);
-
-            tile.decoration = rock;
+            tile.decoration = this.createRockDecoration(foot.x, foot.y);
+            return;
         }
 
         if (tile.type === "corrupted") {
-            const corruption = this.add
-                .text(center.x, center.y, "✦", {
-                    fontFamily: "Georgia, serif",
-                    fontSize: "20px",
-                    color: "#b53e45",
-                    stroke: "#251018",
-                    strokeThickness: 3,
-                })
-                .setOrigin(0.5)
-                .setDepth(center.y + 1);
-
-            tile.decoration = corruption;
+            tile.decoration = this.createCorruptionDecoration(
+                center.x,
+                center.y,
+            );
         }
     }
 
+    private createRockDecoration(x: number, y: number): GameObjects.Container {
+        const config = P0_TERRAIN_DECORATION_CONFIG.rock;
+
+        const rockShadow = this.add.ellipse(
+            config.shadow.x,
+            config.shadow.y,
+            config.shadow.width,
+            config.shadow.height,
+            config.shadow.fillColor,
+            config.shadow.alpha,
+        );
+
+        const rockBody = this.add
+            .polygon(
+                config.body.x,
+                config.body.y,
+                [...config.body.points],
+                config.body.fillColor,
+                1,
+            )
+            .setOrigin(config.body.originX, config.body.originY)
+            .setStrokeStyle(
+                config.body.strokeWidth,
+                config.body.strokeColor,
+                1,
+            );
+
+        const rockLight = this.add
+            .polygon(
+                config.light.x,
+                config.light.y,
+                [...config.light.points],
+                config.light.fillColor,
+                config.light.alpha,
+            )
+            .setOrigin(config.light.originX, config.light.originY);
+
+        return this.add
+            .container(x, y, [rockShadow, rockBody, rockLight])
+            .setDepth(y + config.depthOffset);
+    }
+    private createCorruptionDecoration(x: number, y: number): GameObjects.Text {
+        const config = P0_TERRAIN_DECORATION_CONFIG.corruption;
+
+        return this.add
+            .text(x, y + config.yOffset, config.symbol, {
+                fontFamily: config.fontFamily,
+                fontSize: config.fontSize,
+                color: config.color,
+                stroke: config.stroke,
+                strokeThickness: config.strokeThickness,
+            })
+            .setOrigin(0.5)
+            .setDepth(y + config.depthOffset);
+    }
     private createTileDebugCoordinate(
         tile: ArenaTile,
         x: number,
