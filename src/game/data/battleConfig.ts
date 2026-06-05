@@ -195,3 +195,48 @@ export const P0_COMBAT_HUD_LAYOUT = {
         fontSize: "14px",
     },
 } as const;
+export const P0_SCENE_TEXT_LAYOUT = {
+    title: {
+        x: 512,
+        y: 34,
+        text: "BOOKS OF DESTINY",
+        fontSize: "34px",
+    },
+    subtitle: {
+        x: 512,
+        y: 76,
+        text: "P0 — ARENA DE COMBATE",
+        fontSize: "16px",
+    },
+    instruction: {
+        x: 512,
+        y: 132,
+        initialText:
+            "Escolha uma habilidade, movimente o Cavaleiro ou passe o turno",
+        fontSize: "14px",
+    },
+    prototypeLabel: {
+        x: 36,
+        y: 730,
+        text: "PROTÓTIPO DE COMBATE TÁTICO",
+        fontSize: "12px",
+    },
+    footerBox: {
+        x: 512,
+        y: 636,
+        width: 570,
+        height: 48,
+    },
+    coordinateText: {
+        x: 512,
+        y: 636,
+        initialText: "Nenhuma casa selecionada",
+        fontSize: "16px",
+    },
+    statusText: {
+        x: 512,
+        y: 679,
+        initialText: "Turno do Jogador — Selecione uma ação",
+        fontSize: "16px",
+    },
+} as const;

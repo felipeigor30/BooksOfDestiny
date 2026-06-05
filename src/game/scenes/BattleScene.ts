@@ -21,6 +21,7 @@ import {
     P0_GRID_CONFIG,
     P0_ISOMETRIC_CONFIG,
     P0_PANEL_BUTTON_STYLES,
+    P0_SCENE_TEXT_LAYOUT,
     P0_TILE_COLORS,
     P0_TILE_STYLES,
 } from "../data/battleConfig";
@@ -152,6 +153,8 @@ export class BattleScene extends Scene {
     }
 
     private createBackground(): void {
+        const layout = P0_SCENE_TEXT_LAYOUT;
+
         this.add.rectangle(512, 384, 1024, 768, 0x09070b).setDepth(-10);
 
         this.add
@@ -159,18 +162,25 @@ export class BattleScene extends Scene {
             .setStrokeStyle(2, 0x3c261c, 1)
             .setDepth(-5);
 
-        this.add.text(36, 730, "PROTÓTIPO DE COMBATE TÁTICO", {
-            fontFamily: "Georgia, serif",
-            fontSize: "12px",
-            color: "#7c5a42",
-        });
+        this.add.text(
+            layout.prototypeLabel.x,
+            layout.prototypeLabel.y,
+            layout.prototypeLabel.text,
+            {
+                fontFamily: "Georgia, serif",
+                fontSize: layout.prototypeLabel.fontSize,
+                color: "#7c5a42",
+            },
+        );
     }
 
     private createHeader(): void {
+        const layout = P0_SCENE_TEXT_LAYOUT;
+
         this.add
-            .text(512, 34, "BOOKS OF DESTINY", {
+            .text(layout.title.x, layout.title.y, layout.title.text, {
                 fontFamily: "Georgia, serif",
-                fontSize: "34px",
+                fontSize: layout.title.fontSize,
                 fontStyle: "bold",
                 color: "#e9c27c",
                 stroke: "#32150d",
@@ -179,21 +189,21 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
 
         this.add
-            .text(512, 76, "P0 — ARENA DE COMBATE", {
+            .text(layout.subtitle.x, layout.subtitle.y, layout.subtitle.text, {
                 fontFamily: "Georgia, serif",
-                fontSize: "16px",
+                fontSize: layout.subtitle.fontSize,
                 color: "#c16432",
             })
             .setOrigin(0.5);
 
         this.instructionText = this.add
             .text(
-                512,
-                132,
-                "Escolha uma habilidade, movimente o Cavaleiro ou passe o turno",
+                layout.instruction.x,
+                layout.instruction.y,
+                layout.instruction.initialText,
                 {
                     fontFamily: "Arial",
-                    fontSize: "14px",
+                    fontSize: layout.instruction.fontSize,
                     color: "#9d8977",
                 },
             )
@@ -605,25 +615,45 @@ export class BattleScene extends Scene {
             });
         }
     }
+
     private createFooter(): void {
+        const layout = P0_SCENE_TEXT_LAYOUT;
+
         this.add
-            .rectangle(512, 636, 570, 48, 0x160f10, 1)
+            .rectangle(
+                layout.footerBox.x,
+                layout.footerBox.y,
+                layout.footerBox.width,
+                layout.footerBox.height,
+                0x160f10,
+                1,
+            )
             .setStrokeStyle(2, 0x6b4730, 1);
 
         this.coordinateText = this.add
-            .text(512, 636, "Nenhuma casa selecionada", {
-                fontFamily: "Georgia, serif",
-                fontSize: "16px",
-                color: "#dbc095",
-            })
+            .text(
+                layout.coordinateText.x,
+                layout.coordinateText.y,
+                layout.coordinateText.initialText,
+                {
+                    fontFamily: "Georgia, serif",
+                    fontSize: layout.coordinateText.fontSize,
+                    color: "#dbc095",
+                },
+            )
             .setOrigin(0.5);
 
         this.statusText = this.add
-            .text(512, 679, "Turno do Jogador — Selecione o Cavaleiro", {
-                fontFamily: "Georgia, serif",
-                fontSize: "16px",
-                color: "#d06c36",
-            })
+            .text(
+                layout.statusText.x,
+                layout.statusText.y,
+                layout.statusText.initialText,
+                {
+                    fontFamily: "Georgia, serif",
+                    fontSize: layout.statusText.fontSize,
+                    color: "#d06c36",
+                },
+            )
             .setOrigin(0.5);
     }
 
