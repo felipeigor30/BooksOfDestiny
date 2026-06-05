@@ -1,6 +1,11 @@
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
-import { FIREBALL, IGNEOUS_SHIELD, IGNEOUS_EXPLOSION } from "../data/abilities";
+import {
+    FIREBALL,
+    FLAME_INVOCATION,
+    IGNEOUS_SHIELD,
+    IGNEOUS_EXPLOSION,
+} from "../data/abilities";
 import {
     GridPosition,
     INITIAL_ENEMIES,
@@ -41,6 +46,13 @@ interface BurningGroundEffect {
     key: string;
     remainingRounds: number;
     damage: number;
+    marker: GameObjects.Text;
+}
+
+interface ActiveFlameInvocation {
+    center: GridPosition;
+    remainingTurns: number;
+    areaTileKeys: Set<string>;
     marker: GameObjects.Text;
 }
 
@@ -125,6 +137,11 @@ export class BattleScene extends Scene {
     private explosionTargetTileKeys = new Set<string>();
     private explosionAreaPreviewTileKeys = new Set<string>();
 
+    private flameInvocationTargetingMode = false;
+    private flameInvocationTargetTileKeys = new Set<string>();
+    private flameInvocationAreaPreviewTileKeys = new Set<string>();
+    private activeFlameInvocation?: ActiveFlameInvocation;
+
     private burningGroundEffects = new Map<string, BurningGroundEffect>();
 
     private concentration = 100;
@@ -143,6 +160,9 @@ export class BattleScene extends Scene {
 
     private explosionButtonBackground!: GameObjects.Rectangle;
     private explosionButtonLabel!: GameObjects.Text;
+
+    private flameInvocationButtonBackground!: GameObjects.Rectangle;
+    private flameInvocationButtonLabel!: GameObjects.Text;
 
     private passTurnButtonBackground!: GameObjects.Rectangle;
     private passTurnButtonLabel!: GameObjects.Text;
@@ -306,6 +326,14 @@ export class BattleScene extends Scene {
 
                 tilePolygon.on("pointerover", () => {
                     if (
+                        this.flameInvocationTargetingMode &&
+                        this.isFlameInvocationTargetTile(tile)
+                    ) {
+                        this.previewFlameInvocationArea(tile);
+                        return;
+                    }
+
+                    if (
                         this.explosionTargetingMode &&
                         this.isExplosionTargetTile(tile)
                     ) {
@@ -319,6 +347,12 @@ export class BattleScene extends Scene {
                 });
 
                 tilePolygon.on("pointerout", () => {
+                    if (this.flameInvocationTargetingMode) {
+                        this.flameInvocationAreaPreviewTileKeys.clear();
+                        this.refreshAllTiles();
+                        return;
+                    }
+
                     if (this.explosionTargetingMode) {
                         this.explosionAreaPreviewTileKeys.clear();
                         this.refreshAllTiles();
@@ -327,6 +361,7 @@ export class BattleScene extends Scene {
 
                     this.refreshTileAppearance(tile);
                 });
+
                 tilePolygon.on("pointerdown", () => {
                     this.handleTileClick(tile);
                 });
@@ -350,6 +385,29 @@ export class BattleScene extends Scene {
         this.refreshAllTiles();
     }
 
+    private previewFlameInvocationArea(centerTile: ArenaTile): void {
+        const radius = FLAME_INVOCATION.areaRadius ?? 1;
+
+        this.flameInvocationAreaPreviewTileKeys = this.calculateAreaTiles(
+            centerTile.row,
+            centerTile.column,
+            radius,
+        );
+
+        this.refreshAllTiles();
+    }
+
+    private isFlameInvocationTargetTile(tile: ArenaTile): boolean {
+        return this.flameInvocationTargetTileKeys.has(
+            this.getPositionKey(tile.row, tile.column),
+        );
+    }
+
+    private isInFlameInvocationPreview(tile: ArenaTile): boolean {
+        return this.flameInvocationAreaPreviewTileKeys.has(
+            this.getPositionKey(tile.row, tile.column),
+        );
+    }
     private calculateAreaTiles(
         centerRow: number,
         centerColumn: number,
@@ -589,10 +647,10 @@ export class BattleScene extends Scene {
 
     private createAbilityPanel(): void {
         this.add
-            .rectangle(835, 590, 280, 150, 0x130d0f, 1)
+            .rectangle(835, 590, 292, 190, 0x130d0f, 1)
             .setStrokeStyle(2, 0x5c3826, 1);
 
-        this.add.text(707, 520, "GRIMÓRIO", {
+        this.add.text(700, 502, "GRIMÓRIO", {
             fontFamily: "Georgia, serif",
             fontSize: "13px",
             color: "#d4a45f",
@@ -600,20 +658,20 @@ export class BattleScene extends Scene {
 
         // Bola de Fogo
         this.fireballButtonBackground = this.add
-            .rectangle(770, 553, 122, 37, 0x22181a, 1)
+            .rectangle(765, 535, 126, 35, 0x22181a, 1)
             .setStrokeStyle(2, 0x4e352a, 1);
 
         this.fireballButtonLabel = this.add
-            .text(770, 553, "🔥 Bola de Fogo", {
+            .text(765, 535, "🔥 Bola de Fogo", {
                 fontFamily: "Georgia, serif",
-                fontSize: "12px",
+                fontSize: "11px",
                 color: "#7e6c60",
             })
             .setOrigin(0.5);
 
         const fireballButton = this.add
-            .container(770, 553, [])
-            .setSize(122, 37)
+            .container(765, 535, [])
+            .setSize(126, 35)
             .setInteractive({ useHandCursor: true });
 
         fireballButton.on("pointerdown", () => {
@@ -622,11 +680,11 @@ export class BattleScene extends Scene {
 
         // Escudo Ígneo
         this.shieldButtonBackground = this.add
-            .rectangle(900, 553, 122, 37, 0x22181a, 1)
+            .rectangle(905, 535, 126, 35, 0x22181a, 1)
             .setStrokeStyle(2, 0x4e352a, 1);
 
         this.shieldButtonLabel = this.add
-            .text(900, 553, "🛡 Escudo Ígneo", {
+            .text(905, 535, "🛡 Escudo", {
                 fontFamily: "Georgia, serif",
                 fontSize: "11px",
                 color: "#7e6c60",
@@ -634,8 +692,8 @@ export class BattleScene extends Scene {
             .setOrigin(0.5);
 
         const shieldButton = this.add
-            .container(900, 553, [])
-            .setSize(122, 37)
+            .container(905, 535, [])
+            .setSize(126, 35)
             .setInteractive({ useHandCursor: true });
 
         shieldButton.on("pointerdown", () => {
@@ -644,42 +702,64 @@ export class BattleScene extends Scene {
 
         // Explosão Ígnea
         this.explosionButtonBackground = this.add
-            .rectangle(770, 597, 122, 37, 0x22181a, 1)
+            .rectangle(765, 576, 126, 35, 0x22181a, 1)
             .setStrokeStyle(2, 0x4e352a, 1);
 
         this.explosionButtonLabel = this.add
-            .text(770, 597, "💥 Explosão", {
+            .text(765, 576, "💥 Explosão", {
                 fontFamily: "Georgia, serif",
-                fontSize: "12px",
+                fontSize: "11px",
                 color: "#7e6c60",
             })
             .setOrigin(0.5);
 
         const explosionButton = this.add
-            .container(770, 597, [])
-            .setSize(122, 37)
+            .container(765, 576, [])
+            .setSize(126, 35)
             .setInteractive({ useHandCursor: true });
 
         explosionButton.on("pointerdown", () => {
             this.selectIgneousExplosion();
         });
 
+        // Invocação Flamejante
+        this.flameInvocationButtonBackground = this.add
+            .rectangle(905, 576, 126, 35, 0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.flameInvocationButtonLabel = this.add
+            .text(905, 576, "☄ Invocação", {
+                fontFamily: "Georgia, serif",
+                fontSize: "11px",
+                color: "#7e6c60",
+            })
+            .setOrigin(0.5);
+
+        const flameInvocationButton = this.add
+            .container(905, 576, [])
+            .setSize(126, 35)
+            .setInteractive({ useHandCursor: true });
+
+        flameInvocationButton.on("pointerdown", () => {
+            this.selectFlameInvocation();
+        });
+
         // Passar turno
         this.passTurnButtonBackground = this.add
-            .rectangle(900, 597, 122, 37, 0x302119, 1)
+            .rectangle(835, 617, 266, 34, 0x302119, 1)
             .setStrokeStyle(2, 0x8c5b31, 1);
 
         this.passTurnButtonLabel = this.add
-            .text(900, 597, "⏭ Passar Turno", {
+            .text(835, 617, "⏭ Passar Turno", {
                 fontFamily: "Georgia, serif",
-                fontSize: "11px",
+                fontSize: "12px",
                 color: "#e5bd78",
             })
             .setOrigin(0.5);
 
         const passTurnButton = this.add
-            .container(900, 597, [])
-            .setSize(122, 37)
+            .container(835, 617, [])
+            .setSize(266, 34)
             .setInteractive({ useHandCursor: true });
 
         passTurnButton.on("pointerdown", () => {
@@ -687,8 +767,8 @@ export class BattleScene extends Scene {
         });
 
         this.concentrationText = this.add.text(
-            707,
-            632,
+            700,
+            648,
             `Concentração: ${this.concentration} / 100`,
             {
                 fontFamily: "Georgia, serif",
@@ -700,6 +780,7 @@ export class BattleScene extends Scene {
         this.setFireballButtonEnabled(true);
         this.setShieldButtonEnabled(true);
         this.setExplosionButtonEnabled(false);
+        this.setFlameInvocationButtonEnabled(true);
         this.setPassTurnButtonEnabled(true);
     }
 
@@ -766,6 +847,9 @@ export class BattleScene extends Scene {
         this.selectedTile = undefined;
 
         this.explosionTargetingMode = false;
+        this.flameInvocationTargetingMode = false;
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
         this.explosionTargetTileKeys.clear();
         this.explosionAreaPreviewTileKeys.clear();
 
@@ -791,6 +875,11 @@ export class BattleScene extends Scene {
 
     private handleTileClick(tile: ArenaTile): void {
         if (this.enemyTurnInProgress || this.battleEnded) {
+            return;
+        }
+
+        if (this.flameInvocationTargetingMode) {
+            this.tryStartFlameInvocationOnTile(tile);
             return;
         }
 
@@ -992,6 +1081,23 @@ export class BattleScene extends Scene {
         this.explosionButtonLabel.setColor("#71655b");
     }
 
+    private setFlameInvocationButtonEnabled(enabled: boolean): void {
+        if (enabled) {
+            this.flameInvocationButtonBackground
+                .setFillStyle(0x4d251b, 1)
+                .setStrokeStyle(2, 0xe48a38, 1);
+
+            this.flameInvocationButtonLabel.setColor("#ffd08a");
+            return;
+        }
+
+        this.flameInvocationButtonBackground
+            .setFillStyle(0x22181a, 1)
+            .setStrokeStyle(2, 0x4e352a, 1);
+
+        this.flameInvocationButtonLabel.setColor("#71655b");
+    }
+
     private updateExplosionAvailability(): void {
         const cost = IGNEOUS_EXPLOSION.concentrationCost ?? 100;
 
@@ -1130,6 +1236,139 @@ export class BattleScene extends Scene {
         );
     }
 
+    private selectFlameInvocation(): void {
+        if (this.enemyTurnInProgress || this.battleEnded) {
+            return;
+        }
+
+        if (this.activeFlameInvocation) {
+            this.statusText.setText(
+                "O Cavaleiro já está canalizando Invocação Flamejante",
+            );
+            return;
+        }
+
+        if (this.flameInvocationTargetingMode) {
+            this.cancelAbilitySelection();
+            return;
+        }
+
+        if (!this.canChooseAbility) {
+            this.statusText.setText("Você já realizou sua ação nesta rodada");
+            return;
+        }
+
+        this.movementMode = false;
+        this.fireballTargetingMode = false;
+        this.explosionTargetingMode = false;
+
+        this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
+
+        this.flameInvocationTargetingMode = true;
+        this.flameInvocationTargetTileKeys = this.calculateExplosionTargetRange(
+            this.playerPosition,
+            FLAME_INVOCATION.range,
+        );
+
+        this.refreshAllTiles();
+
+        this.instructionText.setText(
+            "Invocação Flamejante selecionada — escolha a área onde o meteoro cairá",
+        );
+
+        this.statusText.setText(
+            `Canalização: ${FLAME_INVOCATION.channelTurns} turnos | Dano: ${FLAME_INVOCATION.damage}`,
+        );
+    }
+
+    private tryStartFlameInvocationOnTile(tile: ArenaTile): void {
+        if (!this.isFlameInvocationTargetTile(tile)) {
+            this.coordinateText.setText(
+                "Essa casa está fora do alcance da Invocação Flamejante",
+            );
+            return;
+        }
+
+        this.startFlameInvocation(tile);
+    }
+
+    private startFlameInvocation(centerTile: ArenaTile): void {
+        const radius = FLAME_INVOCATION.areaRadius ?? 1;
+        const channelTurns = FLAME_INVOCATION.channelTurns ?? 2;
+
+        const areaTileKeys = this.calculateAreaTiles(
+            centerTile.row,
+            centerTile.column,
+            radius,
+        );
+
+        const centerPosition = this.getTileCenter(
+            centerTile.row,
+            centerTile.column,
+        );
+
+        const marker = this.add
+            .text(centerPosition.x, centerPosition.y - 42, "☄", {
+                fontFamily: "Georgia, serif",
+                fontSize: "34px",
+                fontStyle: "bold",
+                color: "#ffb347",
+                stroke: "#3b130d",
+                strokeThickness: 4,
+            })
+            .setOrigin(0.5)
+            .setDepth(5000);
+
+        this.tweens.add({
+            targets: marker,
+            y: marker.y - 10,
+            alpha: {
+                from: 0.65,
+                to: 1,
+            },
+            duration: 650,
+            yoyo: true,
+            repeat: -1,
+        });
+
+        this.activeFlameInvocation = {
+            center: {
+                row: centerTile.row,
+                column: centerTile.column,
+            },
+            remainingTurns: channelTurns,
+            areaTileKeys,
+            marker,
+        };
+
+        this.flameInvocationTargetingMode = false;
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
+
+        this.canChooseAbility = false;
+        this.movementAvailable = false;
+
+        this.refreshAllTiles();
+
+        this.coordinateText.setText(
+            `${FLAME_INVOCATION.name} iniciada — ${channelTurns} turnos de canalização`,
+        );
+
+        this.instructionText.setText(
+            "O Cavaleiro começou a canalizar um meteoro flamejante!",
+        );
+
+        this.statusText.setText(
+            "Se o Cavaleiro sofrer dano real no HP, a canalização será interrompida",
+        );
+
+        this.time.delayedCall(550, () => {
+            this.finishPlayerTurn();
+        });
+    }
     private calculateExplosionTargetRange(
         start: GridPosition,
         range: number,
@@ -1183,6 +1422,10 @@ export class BattleScene extends Scene {
         this.attackTileKeys.clear();
 
         this.explosionTargetingMode = false;
+
+        this.flameInvocationTargetingMode = false;
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
         this.explosionTargetTileKeys.clear();
         this.explosionAreaPreviewTileKeys.clear();
 
@@ -1261,10 +1504,13 @@ export class BattleScene extends Scene {
     private cancelAbilitySelection(): void {
         this.fireballTargetingMode = false;
         this.explosionTargetingMode = false;
+        this.flameInvocationTargetingMode = false;
 
         this.attackTileKeys.clear();
         this.explosionTargetTileKeys.clear();
         this.explosionAreaPreviewTileKeys.clear();
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
 
         this.refreshAllTiles();
 
@@ -1303,6 +1549,9 @@ export class BattleScene extends Scene {
         this.fireballTargetingMode = false;
 
         this.explosionTargetingMode = false;
+        this.flameInvocationTargetingMode = false;
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
         this.explosionTargetTileKeys.clear();
         this.explosionAreaPreviewTileKeys.clear();
 
@@ -1523,6 +1772,10 @@ export class BattleScene extends Scene {
         this.movementMode = false;
         this.fireballTargetingMode = false;
         this.explosionTargetingMode = false;
+        this.flameInvocationTargetingMode = false;
+
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
         this.explosionTargetTileKeys.clear();
         this.explosionAreaPreviewTileKeys.clear();
         this.reachableTileKeys.clear();
@@ -1532,6 +1785,12 @@ export class BattleScene extends Scene {
         this.setShieldButtonEnabled(false);
         this.setExplosionButtonEnabled(false);
         this.setPassTurnButtonEnabled(false);
+        this.setFlameInvocationButtonEnabled(false);
+        if (this.activeFlameInvocation) {
+            this.activeFlameInvocation.marker.destroy();
+            this.activeFlameInvocation = undefined;
+        }
+
         this.refreshAllTiles();
 
         if (playerWon) {
@@ -1564,6 +1823,10 @@ export class BattleScene extends Scene {
         this.fireballTargetingMode = false;
         this.enemyTurnInProgress = true;
         this.explosionTargetingMode = false;
+        this.flameInvocationTargetingMode = false;
+
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
         this.explosionTargetTileKeys.clear();
         this.explosionAreaPreviewTileKeys.clear();
         this.reachableTileKeys.clear();
@@ -1987,6 +2250,10 @@ export class BattleScene extends Scene {
         }
 
         if (healthDamage > 0) {
+            this.cancelActiveFlameInvocation(
+                `${enemy.name} interrompeu a canalização ao causar dano real no Cavaleiro`,
+            );
+
             this.playerCurrentHp = Math.max(
                 0,
                 this.playerCurrentHp - healthDamage,
@@ -2041,6 +2308,19 @@ export class BattleScene extends Scene {
         onComplete();
     }
 
+    private cancelActiveFlameInvocation(reason: string): void {
+        if (!this.activeFlameInvocation) {
+            return;
+        }
+
+        this.activeFlameInvocation.marker.destroy();
+        this.activeFlameInvocation = undefined;
+
+        this.statusText.setText(reason);
+
+        this.coordinateText.setText("Invocação Flamejante foi interrompida!");
+    }
+
     private startNewPlayerTurn(): void {
         if (this.battleEnded) {
             return;
@@ -2051,6 +2331,14 @@ export class BattleScene extends Scene {
         }
 
         this.advanceBurningGroundEffects();
+
+        if (this.activeFlameInvocation) {
+            this.round += 1;
+            this.roundText.setText(`RODADA ${this.round}`);
+
+            this.processFlameInvocationChanneling();
+            return;
+        }
 
         this.round += 1;
         this.roundText.setText(`RODADA ${this.round}`);
@@ -2094,6 +2382,185 @@ export class BattleScene extends Scene {
         }
 
         this.refreshAllTiles();
+    }
+
+    private processFlameInvocationChanneling(): void {
+        if (!this.activeFlameInvocation) {
+            return;
+        }
+
+        this.enemyTurnInProgress = false;
+        this.movementMode = false;
+        this.movementAvailable = false;
+        this.canChooseAbility = false;
+        this.fireballTargetingMode = false;
+        this.explosionTargetingMode = false;
+        this.flameInvocationTargetingMode = false;
+
+        this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
+
+        this.setFireballButtonEnabled(false);
+        this.setShieldButtonEnabled(false);
+        this.setExplosionButtonEnabled(false);
+        this.setFlameInvocationButtonEnabled(false);
+        this.setPassTurnButtonEnabled(false);
+
+        this.activeFlameInvocation.remainingTurns -= 1;
+
+        if (this.activeFlameInvocation.remainingTurns > 0) {
+            this.instructionText.setText(
+                "O Cavaleiro continua canalizando Invocação Flamejante...",
+            );
+
+            this.coordinateText.setText(
+                `${this.activeFlameInvocation.remainingTurns} turno(s) restante(s) para o impacto`,
+            );
+
+            this.statusText.setText(
+                "O turno do jogador será consumido pela canalização",
+            );
+
+            this.time.delayedCall(900, () => {
+                this.finishPlayerTurn();
+            });
+
+            return;
+        }
+
+        this.resolveFlameInvocation();
+    }
+
+    private resolveFlameInvocation(): void {
+        const activeInvocation = this.activeFlameInvocation;
+
+        if (!activeInvocation) {
+            return;
+        }
+
+        const centerPosition = this.getTileCenter(
+            activeInvocation.center.row,
+            activeInvocation.center.column,
+        );
+
+        activeInvocation.marker.destroy();
+
+        const impact = this.add
+            .circle(centerPosition.x, centerPosition.y, 12, 0xff8a1c, 0.85)
+            .setStrokeStyle(4, 0xffdc73, 1)
+            .setDepth(6000);
+
+        this.tweens.add({
+            targets: impact,
+            scale: 7,
+            alpha: 0,
+            duration: 620,
+            ease: "Power2",
+            onComplete: () => {
+                impact.destroy();
+                this.applyFlameInvocationImpact(activeInvocation.areaTileKeys);
+            },
+        });
+
+        this.instructionText.setText("Invocação Flamejante foi liberada!");
+
+        this.statusText.setText("O meteoro flamejante atingiu a área marcada");
+    }
+
+    private applyFlameInvocationImpact(areaTileKeys: Set<string>): void {
+        const damage = FLAME_INVOCATION.damage ?? 0;
+
+        let enemiesHit = 0;
+
+        for (const enemy of this.enemies) {
+            if (enemy.defeated) {
+                continue;
+            }
+
+            const enemyKey = this.getPositionKey(
+                enemy.position.row,
+                enemy.position.column,
+            );
+
+            if (!areaTileKeys.has(enemyKey)) {
+                continue;
+            }
+
+            this.damageEnemy(enemy, damage);
+            this.showFloatingDamage(enemy, `-${damage}`, "#ffc766");
+
+            enemiesHit += 1;
+        }
+
+        for (const key of areaTileKeys) {
+            const tile = this.getTileByKey(key);
+
+            if (!tile || tile.type === "rock") {
+                continue;
+            }
+
+            this.igniteGroundTile(tile);
+        }
+
+        this.activeFlameInvocation = undefined;
+
+        this.refreshAllTiles();
+
+        if (this.areAllEnemiesDefeated()) {
+            this.coordinateText.setText(
+                "Invocação Flamejante derrotou todos os inimigos!",
+            );
+
+            this.finishBattle(true);
+            return;
+        }
+
+        if (enemiesHit > 0) {
+            this.coordinateText.setText(
+                `Invocação Flamejante atingiu ${enemiesHit} inimigo(s) e incendiou a área`,
+            );
+        } else {
+            this.coordinateText.setText(
+                "Invocação Flamejante caiu na área marcada, mas nenhum inimigo foi atingido",
+            );
+        }
+
+        this.openPlayerTurnAfterInvocation();
+    }
+
+    private openPlayerTurnAfterInvocation(): void {
+        this.enemyTurnInProgress = false;
+        this.movementMode = false;
+        this.movementAvailable = true;
+        this.canChooseAbility = true;
+        this.fireballTargetingMode = false;
+        this.explosionTargetingMode = false;
+        this.flameInvocationTargetingMode = false;
+
+        this.reachableTileKeys.clear();
+        this.attackTileKeys.clear();
+        this.explosionTargetTileKeys.clear();
+        this.explosionAreaPreviewTileKeys.clear();
+        this.flameInvocationTargetTileKeys.clear();
+        this.flameInvocationAreaPreviewTileKeys.clear();
+
+        this.setFireballButtonEnabled(true);
+        this.setShieldButtonEnabled(true);
+        this.updateExplosionAvailability();
+        this.setFlameInvocationButtonEnabled(true);
+        this.setPassTurnButtonEnabled(true);
+
+        this.refreshAllTiles();
+
+        this.instructionText.setText(
+            "Escolha uma habilidade, movimente o Cavaleiro ou passe o turno",
+        );
+
+        this.statusText.setText(`Rodada ${this.round} — Turno do Jogador`);
     }
 
     private selectTile(tile: ArenaTile): void {
@@ -2249,6 +2716,19 @@ export class BattleScene extends Scene {
 
         if (this.isSelected(tile)) {
             tile.polygon.setFillStyle(this.selectedColor, 1);
+            return;
+        }
+
+        if (this.isInFlameInvocationPreview(tile)) {
+            tile.polygon.setFillStyle(0xd25a1f, 1);
+            return;
+        }
+
+        if (
+            this.flameInvocationTargetingMode &&
+            this.isFlameInvocationTargetTile(tile)
+        ) {
+            tile.polygon.setFillStyle(0x7b351f, 1);
             return;
         }
 

@@ -24,6 +24,8 @@ export interface AbilityDefinition {
     areaRadius?: number;
     burningGroundDamage?: number;
     burningGroundDuration?: number;
+
+    channelTurns?: number;
 }
 
 export const FIREBALL: AbilityDefinition = {
@@ -62,4 +64,19 @@ export const IGNEOUS_EXPLOSION: AbilityDefinition = {
     burningGroundDuration: 2,
     description:
         "Provoca uma explosão flamejante em uma área 3x3 e incendeia o terreno.",
+};
+
+export const FLAME_INVOCATION: AbilityDefinition = {
+    id: "flame-invocation",
+    name: "Invocação Flamejante",
+    category: "channeled",
+    range: 5,
+    concentrationGain: 0,
+    damage: 65,
+    areaRadius: 1,
+    burningGroundDamage: 6,
+    burningGroundDuration: 2,
+    channelTurns: 2,
+    description:
+        "Canaliza um meteoro flamejante que atinge uma área 3x3 após algumas rodadas.",
 };
