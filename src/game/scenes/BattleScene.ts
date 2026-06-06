@@ -22,6 +22,7 @@ import {
     P0_COMBAT_HUD_LAYOUT,
     P0_EFFECTS_CONFIG,
     P0_GRID_CONFIG,
+    P0_INSPECTION_PANEL_LAYOUT,
     P0_ISOMETRIC_CONFIG,
     P0_LEGEND_LAYOUT,
     P0_PANEL_BUTTON_STYLES,
@@ -136,6 +137,9 @@ export class BattleScene extends Scene {
     private instructionText!: GameObjects.Text;
     private statusText!: GameObjects.Text;
 
+    private inspectionTitleText!: GameObjects.Text;
+    private inspectionBodyText!: GameObjects.Text;
+
     private concentrationText!: GameObjects.Text;
 
     private fireballButton!: PanelButton;
@@ -153,13 +157,14 @@ export class BattleScene extends Scene {
 
         this.createBackground();
         this.createHeader();
-        this.createCombatHud();
         this.createArena();
         this.createPlayerMarker();
         this.createEnemies();
         this.createBossHud();
-        this.createFooter();
+        this.createCombatHud();
         this.createAbilityPanel();
+        this.createInspectionPanel();
+        this.createFooter();
         this.createLegend();
         this.refreshAllTiles();
 
@@ -324,6 +329,135 @@ export class BattleScene extends Scene {
             .setOrigin(1, 0);
     }
 
+    private createInspectionPanel(): void {
+        const layout = P0_INSPECTION_PANEL_LAYOUT;
+
+        this.add
+            .rectangle(
+                layout.panel.x,
+                layout.panel.y,
+                layout.panel.width,
+                layout.panel.height,
+                0x120c0d,
+                0.92,
+            )
+            .setStrokeStyle(2, 0x5c3826, 1);
+
+        this.inspectionTitleText = this.add.text(
+            layout.title.x,
+            layout.title.y,
+            "INSPEÇÃO",
+            {
+                fontFamily: "Georgia, serif",
+                fontSize: layout.title.fontSize,
+                fontStyle: "bold",
+                color: "#d4a45f",
+            },
+        );
+
+        this.inspectionBodyText = this.add.text(
+            layout.body.x,
+            layout.body.y,
+            "Clique em uma unidade ou terreno para ver detalhes.",
+            {
+                fontFamily: "Georgia, serif",
+                fontSize: layout.body.fontSize,
+                color: "#c6a57d",
+                lineSpacing: layout.body.lineSpacing,
+                wordWrap: {
+                    width: layout.body.wordWrapWidth,
+                },
+            },
+        );
+    }
+
+    private updateInspectionPanel(title: string, body: string): void {
+        this.inspectionTitleText.setText(title);
+        this.inspectionBodyText.setText(body);
+    }
+
+    private inspectPlayer(): void {
+        this.updateInspectionPanel(
+            this.playerName,
+            [
+                `HP: ${this.playerCurrentHp} / ${this.playerMaxHp}`,
+                `Escudo: ${this.playerShield} / ${IGNEOUS_SHIELD.shieldAbsorption ?? 0}`,
+                `Concentração: ${this.concentration} / 100`,
+                "Afinidade: Fogo",
+                "Função: Cavaleiro Mágico",
+            ].join("\n"),
+        );
+    }
+
+    private inspectEnemy(enemy: EnemyUnit): void {
+        const lines = [
+            `HP: ${enemy.currentHp} / ${enemy.maxHp}`,
+            `Dano: ${enemy.damage}`,
+            `Movimento: ${enemy.movementRange}`,
+        ];
+
+        if (enemy.specialAbility === "corrupted-howl") {
+            lines.push("Tipo: Chefe");
+            lines.push(`Uivo: recarga ${enemy.specialCooldownRemaining}`);
+        }
+
+        if (enemy.burningRounds > 0) {
+            lines.push(`Queimadura: ${enemy.burningRounds} turno(s)`);
+        }
+
+        this.updateInspectionPanel(enemy.name, lines.join("\n"));
+    }
+
+    private inspectTile(tile: ArenaTile): void {
+        if (this.isPlayerOnTile(tile)) {
+            this.inspectPlayer();
+            return;
+        }
+
+        const enemy = this.getEnemyOnTile(tile);
+
+        if (enemy) {
+            this.inspectEnemy(enemy);
+            return;
+        }
+
+        const titleByType: Record<string, string> = {
+            ground: "Terreno comum",
+            corrupted: "Terreno corrompido",
+            rock: "Rocha",
+        };
+
+        const movementText =
+            tile.type === "rock"
+                ? "Movimento: bloqueado"
+                : "Movimento: permitido";
+
+        const fireText = this.isBurningGroundTile(tile)
+            ? "\nEfeito: terreno incendiado"
+            : "";
+
+        this.updateInspectionPanel(
+            titleByType[tile.type] ?? "Terreno",
+            [
+                `Linha: ${tile.row + 1} | Coluna: ${tile.column + 1}`,
+                movementText,
+                `Tipo: ${tile.type}${fireText}`,
+            ].join("\n"),
+        );
+    }
+
+    private getEnemyOnTile(tile: ArenaTile): EnemyUnit | undefined {
+        return this.enemies.find((enemy) => {
+            if (enemy.defeated) {
+                return false;
+            }
+
+            return (
+                enemy.position.row === tile.row &&
+                enemy.position.column === tile.column
+            );
+        });
+    }
     private createArena(): void {
         for (let row = 0; row < this.rows; row++) {
             for (let column = 0; column < this.columns; column++) {
@@ -1019,6 +1153,8 @@ export class BattleScene extends Scene {
         if (this.enemyTurnInProgress || this.battleEnded) {
             return;
         }
+
+        this.inspectTile(tile);
 
         if (this.flameInvocationTargetingMode) {
             this.tryStartFlameInvocationOnTile(tile);
@@ -1824,6 +1960,7 @@ export class BattleScene extends Scene {
         enemy.healthBar.setScale(remainingLifeRatio, 1);
 
         this.updateBossHud(enemy);
+        this.inspectEnemy(enemy);
 
         if (enemy.currentHp === 0) {
             this.defeatEnemy(enemy);
@@ -2540,6 +2677,7 @@ export class BattleScene extends Scene {
                 `${this.playerCurrentHp} / ${this.playerMaxHp}`,
             );
 
+            this.inspectPlayer();
             this.statusText.setText(damageMessage);
         }
 
