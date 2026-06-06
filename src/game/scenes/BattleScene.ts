@@ -18,6 +18,7 @@ import {
 import {
     P0_ABILITY_PANEL_LAYOUT,
     P0_BACKGROUND_LAYOUT,
+    P0_BOSS_HUD_LAYOUT,
     P0_COMBAT_HUD_LAYOUT,
     P0_EFFECTS_CONFIG,
     P0_GRID_CONFIG,
@@ -98,6 +99,12 @@ export class BattleScene extends Scene {
 
     private enemies: EnemyUnit[] = [];
 
+    private bossEnemy?: EnemyUnit;
+    private bossHealthBarBackground?: GameObjects.Rectangle;
+    private bossHealthBar?: GameObjects.Rectangle;
+    private bossHealthText?: GameObjects.Text;
+    private bossNameText?: GameObjects.Text;
+
     private round = 1;
     private roundText!: GameObjects.Text;
 
@@ -150,6 +157,7 @@ export class BattleScene extends Scene {
         this.createArena();
         this.createPlayerMarker();
         this.createEnemies();
+        this.createBossHud();
         this.createFooter();
         this.createAbilityPanel();
         this.createLegend();
@@ -599,21 +607,8 @@ export class BattleScene extends Scene {
             })
             .setOrigin(0.5);
 
-        const label = this.add
-            .text(config.label.x, config.label.y, this.playerName, {
-                fontFamily: "Georgia, serif",
-                fontSize: config.label.fontSize,
-                color: config.label.color,
-                backgroundColor: config.label.backgroundColor,
-                padding: {
-                    x: config.label.paddingX,
-                    y: config.label.paddingY,
-                },
-            })
-            .setOrigin(0.5);
-
         this.playerMarker = this.add
-            .container(position.x, position.y, [shadow, body, initial, label])
+            .container(position.x, position.y, [shadow, body, initial])
             .setDepth(position.y + config.depthOffset);
     }
 
@@ -658,19 +653,6 @@ export class BattleScene extends Scene {
                 })
                 .setOrigin(0.5);
 
-            const label = this.add
-                .text(config.label.x, config.label.y, initialEnemy.name, {
-                    fontFamily: "Georgia, serif",
-                    fontSize: config.label.fontSize,
-                    color: config.label.color,
-                    backgroundColor: config.label.backgroundColor,
-                    padding: {
-                        x: config.label.paddingX,
-                        y: config.label.paddingY,
-                    },
-                })
-                .setOrigin(0.5);
-
             const healthBackground = this.add
                 .rectangle(
                     config.healthBackground.x,
@@ -702,13 +684,12 @@ export class BattleScene extends Scene {
                     shadow,
                     body,
                     symbol,
-                    label,
                     healthBackground,
                     healthBar,
                 ])
                 .setDepth(position.y + config.depthOffset);
 
-            this.enemies.push({
+            const enemyUnit: EnemyUnit = {
                 ...initialEnemy,
                 currentHp: initialEnemy.maxHp,
                 marker,
@@ -718,10 +699,90 @@ export class BattleScene extends Scene {
                     initialEnemy.initialSpecialCooldown ?? 0,
                 burningRounds: 0,
                 burnDamage: 0,
-            });
+            };
+
+            this.enemies.push(enemyUnit);
+
+            if (enemyUnit.id === "alpha-corrupted") {
+                this.bossEnemy = enemyUnit;
+            }
         }
     }
 
+    private createBossHud(): void {
+        if (!this.bossEnemy) {
+            return;
+        }
+
+        const layout = P0_BOSS_HUD_LAYOUT;
+
+        this.add
+            .rectangle(
+                layout.panel.x,
+                layout.panel.y,
+                layout.panel.width,
+                layout.panel.height,
+                layout.panel.fillColor,
+                layout.panel.alpha,
+            )
+            .setStrokeStyle(
+                layout.panel.strokeWidth,
+                layout.panel.strokeColor,
+                1,
+            );
+
+        this.bossNameText = this.add.text(
+            layout.nameText.x,
+            layout.nameText.y,
+            this.bossEnemy.name.toUpperCase(),
+            {
+                fontFamily: "Georgia, serif",
+                fontSize: layout.nameText.fontSize,
+                fontStyle: "bold",
+                color: "#df8a7b",
+            },
+        );
+
+        this.bossHealthText = this.add
+            .text(
+                layout.hpText.x,
+                layout.hpText.y,
+                `HP ${this.bossEnemy.currentHp} / ${this.bossEnemy.maxHp}`,
+                {
+                    fontFamily: "Georgia, serif",
+                    fontSize: layout.hpText.fontSize,
+                    color: "#e7c0ad",
+                },
+            )
+            .setOrigin(1, 0);
+
+        this.bossHealthBarBackground = this.add
+            .rectangle(
+                layout.healthBarBackground.x,
+                layout.healthBarBackground.y,
+                layout.healthBarBackground.width,
+                layout.healthBarBackground.height,
+                layout.healthBarBackground.fillColor,
+                1,
+            )
+            .setOrigin(0, 0.5)
+            .setStrokeStyle(
+                layout.healthBarBackground.strokeWidth,
+                layout.healthBarBackground.strokeColor,
+                1,
+            );
+
+        this.bossHealthBar = this.add
+            .rectangle(
+                layout.healthBar.x,
+                layout.healthBar.y,
+                layout.healthBar.width,
+                layout.healthBar.height,
+                layout.healthBar.fillColor,
+                1,
+            )
+            .setOrigin(0, 0.5);
+    }
     private createFooter(): void {
         const layout = P0_SCENE_TEXT_LAYOUT;
 
@@ -757,7 +818,7 @@ export class BattleScene extends Scene {
                 {
                     fontFamily: "Georgia, serif",
                     fontSize: layout.statusText.fontSize,
-                    color: "#d06c36",
+                    color: "#b76b3d",
                 },
             )
             .setOrigin(0.5);
@@ -780,6 +841,7 @@ export class BattleScene extends Scene {
             .text(x, y, text, {
                 fontFamily: "Georgia, serif",
                 fontSize,
+                fontStyle: "bold",
                 color: "#7e6c60",
             })
             .setOrigin(0.5);
@@ -905,7 +967,7 @@ export class BattleScene extends Scene {
             this.add
                 .text(item.x, layout.y, item.label, {
                     fontFamily: "Arial",
-                    fontSize: "12px",
+                    fontSize: "18px",
                     color: item.color,
                 })
                 .setOrigin(0, 0.5);
@@ -1761,14 +1823,36 @@ export class BattleScene extends Scene {
 
         enemy.healthBar.setScale(remainingLifeRatio, 1);
 
+        this.updateBossHud(enemy);
+
         if (enemy.currentHp === 0) {
             this.defeatEnemy(enemy);
         }
     }
 
+    private updateBossHud(enemy: EnemyUnit): void {
+        if (!this.bossEnemy || enemy.id !== this.bossEnemy.id) {
+            return;
+        }
+
+        if (!this.bossHealthBar || !this.bossHealthText) {
+            return;
+        }
+
+        const remainingLifeRatio = enemy.currentHp / enemy.maxHp;
+
+        this.bossHealthBar.setScale(remainingLifeRatio, 1);
+
+        this.bossHealthText.setText(`HP ${enemy.currentHp} / ${enemy.maxHp}`);
+    }
+
     private defeatEnemy(enemy: EnemyUnit): void {
         enemy.defeated = true;
         enemy.marker.setAlpha(0.3);
+
+        if (this.bossEnemy && enemy.id === this.bossEnemy.id) {
+            this.setBossHudDefeated();
+        }
 
         if (enemy.burnMarker) {
             enemy.burnMarker.destroy();
@@ -1779,6 +1863,13 @@ export class BattleScene extends Scene {
         enemy.burnDamage = 0;
 
         this.refreshAllTiles();
+    }
+
+    private setBossHudDefeated(): void {
+        this.bossHealthBar?.setAlpha(0.25);
+        this.bossHealthBarBackground?.setAlpha(0.35);
+        this.bossNameText?.setAlpha(0.45);
+        this.bossHealthText?.setText("DERROTADO").setAlpha(0.6);
     }
 
     private areAllEnemiesDefeated(): boolean {

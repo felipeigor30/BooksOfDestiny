@@ -15,11 +15,11 @@ export const P0_GRID_CONFIG = {
 } as const;
 
 export const P0_ISOMETRIC_CONFIG = {
-    tileWidth: 96,
-    tileHeight: 48,
-    arenaOriginX: 512,
-    arenaOriginY: 184,
-    entityFootOffsetY: 6,
+    tileWidth: 104,
+    tileHeight: 52,
+    arenaOriginX: 455,
+    arenaOriginY: 178,
+    entityFootOffsetY: 7,
     rockFootOffsetY: 2,
 } as const;
 
@@ -101,186 +101,186 @@ export const P0_ABILITY_PANEL_LAYOUT: {
     concentrationText: TextLayout;
 } = {
     panel: {
-        x: 835,
-        y: 590,
-        width: 292,
-        height: 190,
+        x: 1052,
+        y: 444,
+        width: 330,
+        height: 320,
     },
     title: {
-        x: 700,
-        y: 502,
-        fontSize: "13px",
+        x: 910,
+        y: 305,
+        fontSize: "18px",
     },
     buttons: {
         fireball: {
-            x: 765,
-            y: 535,
-            width: 126,
-            height: 35,
-            label: "🔥 Bola de Fogo",
-            fontSize: "11px",
+            x: 988,
+            y: 350,
+            width: 142,
+            height: 44,
+            label: "🔥 Bola",
+            fontSize: "14px",
         },
         shield: {
-            x: 905,
-            y: 535,
-            width: 126,
-            height: 35,
+            x: 1142,
+            y: 350,
+            width: 142,
+            height: 44,
             label: "🛡 Escudo",
-            fontSize: "11px",
+            fontSize: "14px",
         },
         explosion: {
-            x: 765,
-            y: 576,
-            width: 126,
-            height: 35,
+            x: 988,
+            y: 408,
+            width: 142,
+            height: 44,
             label: "💥 Explosão",
-            fontSize: "11px",
+            fontSize: "14px",
         },
         flameInvocation: {
-            x: 905,
-            y: 576,
-            width: 126,
-            height: 35,
+            x: 1142,
+            y: 408,
+            width: 142,
+            height: 44,
             label: "☄ Invocação",
-            fontSize: "11px",
+            fontSize: "14px",
         },
         passTurn: {
-            x: 835,
-            y: 617,
-            width: 266,
-            height: 34,
+            x: 1065,
+            y: 476,
+            width: 296,
+            height: 46,
             label: "⏭ Passar Turno",
-            fontSize: "12px",
+            fontSize: "14px",
         },
     },
     concentrationText: {
-        x: 700,
-        y: 648,
-        fontSize: "12px",
+        x: 910,
+        y: 540,
+        fontSize: "14px",
     },
 };
 
 export const P0_COMBAT_HUD_LAYOUT = {
     hpLabel: {
-        x: 82,
-        y: 114,
-        fontSize: "13px",
+        x: 80,
+        y: 122,
+        fontSize: "14px",
     },
     hpBarBackground: {
-        x: 123,
-        y: 121,
-        width: 142,
-        height: 14,
+        x: 125,
+        y: 130,
+        width: 170,
+        height: 15,
     },
     hpBar: {
-        x: 126,
-        y: 121,
-        width: 136,
+        x: 129,
+        y: 130,
+        width: 162,
         height: 8,
     },
     hpText: {
-        x: 274,
-        y: 114,
+        x: 305,
+        y: 122,
         fontSize: "13px",
     },
     shieldLabel: {
-        x: 82,
-        y: 137,
-        fontSize: "12px",
+        x: 80,
+        y: 146,
+        fontSize: "13px",
     },
     shieldText: {
-        x: 123,
-        y: 137,
-        fontSize: "12px",
+        x: 125,
+        y: 146,
+        fontSize: "13px",
     },
     roundText: {
-        x: 932,
-        y: 114,
-        fontSize: "14px",
+        x: 1170,
+        y: 122,
+        fontSize: "17px",
     },
 } as const;
 
 export const P0_SCENE_TEXT_LAYOUT = {
     title: {
-        x: 512,
-        y: 34,
+        x: 640,
+        y: 32,
         text: "BOOKS OF DESTINY",
         fontSize: "34px",
     },
     subtitle: {
-        x: 512,
-        y: 76,
+        x: 640,
+        y: 72,
         text: "P0 — ARENA DE COMBATE",
-        fontSize: "16px",
+        fontSize: "15px",
     },
     instruction: {
-        x: 512,
-        y: 132,
-        initialText:
-            "Escolha uma habilidade, movimente o Cavaleiro ou passe o turno",
+        x: 640,
+        y: 96,
+        initialText: "Selecione uma ação",
         fontSize: "14px",
     },
     prototypeLabel: {
-        x: 36,
-        y: 730,
+        x: 60,
+        y: 700,
         text: "PROTÓTIPO DE COMBATE TÁTICO",
-        fontSize: "12px",
+        fontSize: "10px",
     },
     footerBox: {
-        x: 512,
-        y: 636,
-        width: 570,
-        height: 48,
+        x: 455,
+        y: 595,
+        width: 760,
+        height: 54,
     },
     coordinateText: {
-        x: 512,
-        y: 636,
+        x: 455,
+        y: 584,
         initialText: "Nenhuma casa selecionada",
-        fontSize: "16px",
+        fontSize: "20px",
     },
     statusText: {
-        x: 512,
-        y: 679,
+        x: 455,
+        y: 635,
         initialText: "Turno do Jogador — Selecione uma ação",
-        fontSize: "16px",
+        fontSize: "19px",
     },
 } as const;
+
 export const P0_LEGEND_LAYOUT: LegendLayout = {
     box: {
-        x: 512,
-        y: 706,
-        width: 650,
-        height: 30,
+        x: 455,
+        y: 668,
+        width: 760,
+        height: 28,
     },
-    y: 706,
+    y: 668,
     items: [
         {
-            x: 280,
+            x: 150,
             label: "◆ Chão",
             color: "#96705b",
         },
         {
-            x: 410,
+            x: 275,
             label: "✦ Corrupção",
             color: "#bd4d51",
         },
         {
-            x: 563,
+            x: 430,
             label: "▲ Rocha",
             color: "#968981",
         },
         {
-            x: 680,
+            x: 565,
             label: "F Cavaleiro",
             color: "#e4aa52",
         },
         {
-            x: 785,
+            x: 715,
             label: "L Lobo",
             color: "#e6817d",
         },
         {
-            x: 870,
+            x: 835,
             label: "A Alpha",
             color: "#d44c4c",
         },
@@ -292,26 +292,27 @@ export const P0_BACKGROUND_LAYOUT: {
     battleFrame: ColoredRectLayout;
 } = {
     screen: {
-        x: 512,
-        y: 384,
-        width: 1024,
-        height: 768,
+        x: 640,
+        y: 360,
+        width: 1280,
+        height: 720,
         fillColor: 0x09070b,
         alpha: 1,
         depth: -10,
     },
     battleFrame: {
-        x: 512,
-        y: 400,
-        width: 930,
-        height: 590,
+        x: 640,
+        y: 375,
+        width: 1180,
+        height: 620,
         fillColor: 0x120d11,
-        alpha: 0.92,
+        alpha: 0.94,
         strokeColor: 0x3c261c,
         strokeWidth: 2,
         depth: -5,
     },
 };
+
 export const P0_UNIT_MARKER_CONFIG = {
     player: {
         shadow: {
@@ -333,17 +334,17 @@ export const P0_UNIT_MARKER_CONFIG = {
         symbol: {
             x: 0,
             y: -25,
-            fontSize: "21px",
+            fontSize: "24px",
             color: "#ffe6a8",
         },
         label: {
             x: 0,
             y: -55,
-            fontSize: "11px",
+            fontSize: "10px",
             color: "#f0c586",
             backgroundColor: "#211410",
-            paddingX: 6,
-            paddingY: 3,
+            paddingX: 4,
+            paddingY: 2,
         },
         depthOffset: 50,
     },
@@ -367,7 +368,7 @@ export const P0_UNIT_MARKER_CONFIG = {
         symbol: {
             x: 0,
             y: -23,
-            fontSize: "20px",
+            fontSize: "23px",
             color: "#f1a0a0",
         },
         label: {
@@ -398,6 +399,7 @@ export const P0_UNIT_MARKER_CONFIG = {
         depthOffset: 50,
     },
 } as const;
+
 export const P0_TERRAIN_DECORATION_CONFIG = {
     rock: {
         shadow: {
@@ -440,6 +442,7 @@ export const P0_TERRAIN_DECORATION_CONFIG = {
         depthOffset: 1,
     },
 } as const;
+
 export const P0_EFFECTS_CONFIG = {
     burnMarker: {
         x: 22,
@@ -543,5 +546,44 @@ export const P0_EFFECTS_CONFIG = {
         depth: 6000,
         scale: 7,
         duration: 620,
+    },
+} as const;
+
+export const P0_BOSS_HUD_LAYOUT = {
+    panel: {
+        x: 640,
+        y: 130,
+        width: 440,
+        height: 42,
+        fillColor: 0x130b0d,
+        alpha: 0.96,
+        strokeColor: 0x8b3030,
+        strokeWidth: 2,
+    },
+    nameText: {
+        x: 435,
+        y: 116,
+        fontSize: "13px",
+    },
+    hpText: {
+        x: 845,
+        y: 116,
+        fontSize: "13px",
+    },
+    healthBarBackground: {
+        x: 435,
+        y: 142,
+        width: 410,
+        height: 12,
+        fillColor: 0x241215,
+        strokeColor: 0x743232,
+        strokeWidth: 1,
+    },
+    healthBar: {
+        x: 439,
+        y: 142,
+        width: 402,
+        height: 7,
+        fillColor: 0xb32d2d,
     },
 } as const;
