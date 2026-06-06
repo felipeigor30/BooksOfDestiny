@@ -315,10 +315,16 @@ export const P0_BACKGROUND_LAYOUT: {
 
 export const P0_UNIT_MARKER_CONFIG = {
     player: {
+        sprite: {
+            key: "unit-fire-knight",
+            x: 0,
+            y: -4,
+            targetHeight: 82,
+        },
         shadow: {
             x: 0,
             y: 1,
-            width: 48,
+            width: 58,
             height: 18,
             fillColor: 0x000000,
             alpha: 0.5,
@@ -349,11 +355,23 @@ export const P0_UNIT_MARKER_CONFIG = {
         depthOffset: 50,
     },
     enemy: {
+        wolfSprite: {
+            key: "unit-corrupted-wolf",
+            x: 0,
+            y: -5,
+            targetHeight: 74,
+        },
+        alphaSprite: {
+            key: "unit-corrupted-alpha",
+            x: 0,
+            y: -8,
+            targetHeight: 96,
+        },
         shadow: {
             x: 0,
             y: 1,
-            width: 46,
-            height: 16,
+            width: 52,
+            height: 18,
             fillColor: 0x000000,
             alpha: 0.55,
         },
@@ -382,18 +400,18 @@ export const P0_UNIT_MARKER_CONFIG = {
         },
         healthBackground: {
             x: 0,
-            y: -42,
-            width: 48,
-            height: 5,
+            y: -76,
+            width: 56,
+            height: 6,
             fillColor: 0x241215,
             strokeWidth: 1,
             strokeColor: 0x4a292c,
         },
         healthBar: {
-            x: -23,
-            y: -42,
-            width: 46,
-            height: 3,
+            x: -27,
+            y: -76,
+            width: 54,
+            height: 4,
             fillColor: 0xb43a39,
         },
         depthOffset: 50,

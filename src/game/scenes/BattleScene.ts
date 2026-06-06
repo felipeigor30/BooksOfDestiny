@@ -155,6 +155,28 @@ export class BattleScene extends Scene {
     constructor() {
         super("BattleScene");
     }
+    preload(): void {
+        if (!this.textures.exists("unit-fire-knight")) {
+            this.load.image(
+                "unit-fire-knight",
+                "assets/sprites/units/fire-knight.png",
+            );
+        }
+
+        if (!this.textures.exists("unit-corrupted-wolf")) {
+            this.load.image(
+                "unit-corrupted-wolf",
+                "assets/sprites/units/corrupted-wolf.png",
+            );
+        }
+
+        if (!this.textures.exists("unit-corrupted-alpha")) {
+            this.load.image(
+                "unit-corrupted-alpha",
+                "assets/sprites/units/corrupted-alpha.png",
+            );
+        }
+    }
 
     create(): void {
         this.cameras.main.setBackgroundColor("#09070b");
@@ -787,31 +809,17 @@ export class BattleScene extends Scene {
             config.shadow.alpha,
         );
 
-        const body = this.add
-            .circle(
-                config.body.x,
-                config.body.y,
-                config.body.radius,
-                config.body.fillColor,
-                1,
-            )
-            .setStrokeStyle(
-                config.body.strokeWidth,
-                config.body.strokeColor,
-                1,
-            );
+        const sprite = this.add
+            .image(config.sprite.x, config.sprite.y, config.sprite.key)
+            .setOrigin(0.5, 1);
 
-        const initial = this.add
-            .text(config.symbol.x, config.symbol.y, this.playerSymbol, {
-                fontFamily: "Georgia, serif",
-                fontSize: config.symbol.fontSize,
-                fontStyle: "bold",
-                color: config.symbol.color,
-            })
-            .setOrigin(0.5);
+        sprite.setDisplaySize(
+            sprite.width * (config.sprite.targetHeight / sprite.height),
+            config.sprite.targetHeight,
+        );
 
         this.playerMarker = this.add
-            .container(position.x, position.y, [shadow, body, initial])
+            .container(position.x, position.y, [shadow, sprite])
             .setDepth(position.y + config.depthOffset);
     }
 
@@ -833,28 +841,19 @@ export class BattleScene extends Scene {
                 config.shadow.alpha,
             );
 
-            const body = this.add
-                .circle(
-                    config.body.x,
-                    config.body.y,
-                    config.body.radius,
-                    config.body.fillColor,
-                    1,
-                )
-                .setStrokeStyle(
-                    config.body.strokeWidth,
-                    config.body.strokeColor,
-                    1,
-                );
+            const spriteConfig =
+                initialEnemy.id === "alpha-corrupted"
+                    ? config.alphaSprite
+                    : config.wolfSprite;
 
-            const symbol = this.add
-                .text(config.symbol.x, config.symbol.y, initialEnemy.symbol, {
-                    fontFamily: "Georgia, serif",
-                    fontSize: config.symbol.fontSize,
-                    fontStyle: "bold",
-                    color: config.symbol.color,
-                })
-                .setOrigin(0.5);
+            const sprite = this.add
+                .image(spriteConfig.x, spriteConfig.y, spriteConfig.key)
+                .setOrigin(0.5, 1);
+
+            sprite.setDisplaySize(
+                sprite.width * (spriteConfig.targetHeight / sprite.height),
+                spriteConfig.targetHeight,
+            );
 
             const healthBackground = this.add
                 .rectangle(
@@ -885,8 +884,7 @@ export class BattleScene extends Scene {
             const marker = this.add
                 .container(position.x, position.y, [
                     shadow,
-                    body,
-                    symbol,
+                    sprite,
                     healthBackground,
                     healthBar,
                 ])
