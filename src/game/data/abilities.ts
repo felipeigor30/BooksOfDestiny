@@ -48,7 +48,7 @@ export const IGNEOUS_SHIELD: AbilityDefinition = {
     range: 0,
     concentrationGain: 10,
     description: "Cria uma barreira flamejante que absorve dano recebido.",
-    shieldAbsorption: 25,
+    shieldAbsorption: 50,
 };
 
 export const IGNEOUS_EXPLOSION: AbilityDefinition = {

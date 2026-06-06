@@ -87,6 +87,7 @@ export const P0_PANEL_BUTTON_STYLES: Record<
         disabledTextColor: "#71655b",
     },
 };
+
 export const P0_ABILITY_PANEL_LAYOUT: {
     panel: RectLayout;
     title: TextLayout;
@@ -158,6 +159,7 @@ export const P0_ABILITY_PANEL_LAYOUT: {
         fontSize: "12px",
     },
 };
+
 export const P0_COMBAT_HUD_LAYOUT = {
     hpLabel: {
         x: 82,
@@ -197,6 +199,7 @@ export const P0_COMBAT_HUD_LAYOUT = {
         fontSize: "14px",
     },
 } as const;
+
 export const P0_SCENE_TEXT_LAYOUT = {
     title: {
         x: 512,

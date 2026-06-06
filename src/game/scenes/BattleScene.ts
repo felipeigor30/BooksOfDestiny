@@ -714,6 +714,8 @@ export class BattleScene extends Scene {
                 marker,
                 healthBar,
                 defeated: false,
+                specialCooldownRemaining:
+                    initialEnemy.initialSpecialCooldown ?? 0,
                 burningRounds: 0,
                 burnDamage: 0,
             });
@@ -2061,9 +2063,15 @@ export class BattleScene extends Scene {
     ): void {
         if (this.isAdjacentToPlayer(enemy.position)) {
             this.enemyAttackPlayer(enemy, () => {
-                this.time.delayedCall(350, () => {
-                    this.executeEnemyAction(activeEnemies, index + 1);
-                });
+                this.finishEnemyAction(activeEnemies, index);
+            });
+
+            return;
+        }
+
+        if (this.canUseCorruptedHowl(enemy)) {
+            this.alphaUseCorruptedHowl(enemy, () => {
+                this.finishEnemyAction(activeEnemies, index);
             });
 
             return;
@@ -2076,20 +2084,97 @@ export class BattleScene extends Scene {
 
             if (this.isAdjacentToPlayer(enemy.position)) {
                 this.enemyAttackPlayer(enemy, () => {
-                    this.time.delayedCall(350, () => {
-                        this.executeEnemyAction(activeEnemies, index + 1);
-                    });
+                    this.finishEnemyAction(activeEnemies, index);
                 });
 
                 return;
             }
 
-            this.time.delayedCall(350, () => {
-                this.executeEnemyAction(activeEnemies, index + 1);
-            });
+            this.finishEnemyAction(activeEnemies, index);
         });
     }
 
+    private finishEnemyAction(activeEnemies: EnemyUnit[], index: number): void {
+        this.advanceEnemySpecialCooldown(activeEnemies[index]);
+
+        this.time.delayedCall(350, () => {
+            this.executeEnemyAction(activeEnemies, index + 1);
+        });
+    }
+
+    private advanceEnemySpecialCooldown(enemy: EnemyUnit): void {
+        if (!enemy.specialAbility || enemy.defeated) {
+            return;
+        }
+
+        if (enemy.specialCooldownRemaining > 0) {
+            enemy.specialCooldownRemaining -= 1;
+        }
+    }
+
+    private resetEnemySpecialCooldown(enemy: EnemyUnit): void {
+        enemy.specialCooldownRemaining = enemy.specialCooldown ?? 0;
+    }
+
+    private canUseCorruptedHowl(enemy: EnemyUnit): boolean {
+        if (enemy.specialAbility !== "corrupted-howl") {
+            return false;
+        }
+
+        if (enemy.specialCooldownRemaining > 0) {
+            return false;
+        }
+
+        const range = enemy.specialRange ?? 0;
+
+        const distance = getManhattanDistance(
+            enemy.position,
+            this.playerPosition,
+        );
+
+        return distance <= range;
+    }
+    private alphaUseCorruptedHowl(
+        enemy: EnemyUnit,
+        onComplete: () => void,
+    ): void {
+        const damage = enemy.specialDamage ?? 0;
+
+        this.resetEnemySpecialCooldown(enemy);
+
+        this.instructionText.setText(`${enemy.name} usou Uivo Corrompido!`);
+
+        this.statusText.setText(
+            `Ondas sombrias atingem o Cavaleiro à distância`,
+        );
+
+        const playerPosition = this.getTileFootPosition(
+            this.playerPosition.row,
+            this.playerPosition.column,
+        );
+
+        const howlEffect = this.add
+            .circle(playerPosition.x, playerPosition.y - 24, 10, 0x5b254f, 0.45)
+            .setStrokeStyle(3, 0xc75bb7, 0.9)
+            .setDepth(5000);
+
+        this.tweens.add({
+            targets: howlEffect,
+            scale: 3.4,
+            alpha: 0,
+            duration: 520,
+            ease: "Power2",
+            onComplete: () => {
+                howlEffect.destroy();
+
+                this.applyDamageToPlayer(
+                    damage,
+                    `${enemy.name} causou ${damage} de dano com Uivo Corrompido`,
+                    onComplete,
+                );
+            },
+        });
+    }
     private applyBurnAtStartOfEnemyTurn(
         enemy: EnemyUnit,
         onComplete: () => void,
@@ -2320,8 +2405,11 @@ export class BattleScene extends Scene {
         return distance === 1;
     }
 
-    private enemyAttackPlayer(enemy: EnemyUnit, onComplete: () => void): void {
-        const originalDamage = enemy.damage;
+    private applyDamageToPlayer(
+        originalDamage: number,
+        damageMessage: string,
+        onComplete: () => void,
+    ): void {
         const absorbedDamage = Math.min(this.playerShield, originalDamage);
         const healthDamage = originalDamage - absorbedDamage;
 
@@ -2335,9 +2423,7 @@ export class BattleScene extends Scene {
             if (this.playerShield === 0) {
                 this.removePlayerShield();
 
-                this.statusText.setText(
-                    `${enemy.name} quebrou o Escudo Ígneo!`,
-                );
+                this.statusText.setText("O Escudo Ígneo foi quebrado!");
             } else {
                 this.statusText.setText(
                     `Escudo Ígneo absorveu ${absorbedDamage} de dano — proteção restante: ${this.playerShield}`,
@@ -2347,7 +2433,7 @@ export class BattleScene extends Scene {
 
         if (healthDamage > 0) {
             this.cancelActiveFlameInvocation(
-                `${enemy.name} interrompeu a canalização ao causar dano real no Cavaleiro`,
+                "A canalização foi interrompida por dano real no Cavaleiro",
             );
 
             this.playerCurrentHp = Math.max(
@@ -2363,13 +2449,7 @@ export class BattleScene extends Scene {
                 `${this.playerCurrentHp} / ${this.playerMaxHp}`,
             );
 
-            this.statusText.setText(
-                `${enemy.name} causou ${healthDamage} de dano ao Cavaleiro`,
-            );
-        }
-
-        if (absorbedDamage === 0 && healthDamage === 0) {
-            this.statusText.setText(`${enemy.name} não causou dano`);
+            this.statusText.setText(damageMessage);
         }
 
         if (this.playerMarker) {
@@ -2402,6 +2482,14 @@ export class BattleScene extends Scene {
         }
 
         onComplete();
+    }
+
+    private enemyAttackPlayer(enemy: EnemyUnit, onComplete: () => void): void {
+        this.applyDamageToPlayer(
+            enemy.damage,
+            `${enemy.name} causou ${enemy.damage} de dano ao Cavaleiro`,
+            onComplete,
+        );
     }
 
     private cancelActiveFlameInvocation(reason: string): void {

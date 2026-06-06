@@ -102,6 +102,8 @@ export const INITIAL_PLAYER_POSITION: GridPosition = {
 
 export const PLAYER_MOVEMENT_RANGE = 4;
 
+export type EnemySpecialAbility = "corrupted-howl";
+
 export interface InitialEnemy {
     id: string;
     name: string;
@@ -110,6 +112,12 @@ export interface InitialEnemy {
     damage: number;
     movementRange: number;
     position: GridPosition;
+
+    specialAbility?: EnemySpecialAbility;
+    specialDamage?: number;
+    specialRange?: number;
+    specialCooldown?: number;
+    initialSpecialCooldown?: number;
 }
 
 export const INITIAL_ENEMIES: InitialEnemy[] = [
@@ -148,5 +156,10 @@ export const INITIAL_ENEMIES: InitialEnemy[] = [
             row: 0,
             column: 7,
         },
+        specialAbility: "corrupted-howl",
+        specialDamage: 8,
+        specialRange: 5,
+        specialCooldown: 3,
+        initialSpecialCooldown: 1,
     },
 ];

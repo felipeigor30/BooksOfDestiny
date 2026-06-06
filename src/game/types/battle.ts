@@ -1,5 +1,5 @@
 import { GameObjects } from "phaser";
-import { GridPosition, TileType } from "../data/arena";
+import { EnemySpecialAbility, GridPosition, TileType } from "../data/arena";
 
 export interface ArenaTile {
     row: number;
@@ -27,6 +27,12 @@ export interface EnemyUnit {
     marker: GameObjects.Container;
     healthBar: GameObjects.Rectangle;
     defeated: boolean;
+
+    specialAbility?: EnemySpecialAbility;
+    specialDamage?: number;
+    specialRange?: number;
+    specialCooldown?: number;
+    specialCooldownRemaining: number;
 
     burningRounds: number;
     burnDamage: number;
