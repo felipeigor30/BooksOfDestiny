@@ -140,6 +140,10 @@ export class BattleScene extends Scene {
     private inspectionTitleText!: GameObjects.Text;
     private inspectionBodyText!: GameObjects.Text;
 
+    private lastInspectionTitle = "INSPEÇÃO";
+    private lastInspectionBody =
+        "Clique em uma unidade ou terreno para ver detalhes.";
+
     private concentrationText!: GameObjects.Text;
 
     private fireballButton!: PanelButton;
@@ -371,25 +375,99 @@ export class BattleScene extends Scene {
         );
     }
 
-    private updateInspectionPanel(title: string, body: string): void {
+    private updateInspectionPanel(
+        title: string,
+        body: string,
+        persist = true,
+    ): void {
         this.inspectionTitleText.setText(title);
         this.inspectionBodyText.setText(body);
+
+        if (!persist) {
+            return;
+        }
+
+        this.lastInspectionTitle = title;
+        this.lastInspectionBody = body;
     }
 
-    private inspectPlayer(): void {
-        this.updateInspectionPanel(
-            this.playerName,
-            [
-                `HP: ${this.playerCurrentHp} / ${this.playerMaxHp}`,
-                `Escudo: ${this.playerShield} / ${IGNEOUS_SHIELD.shieldAbsorption ?? 0}`,
-                `Concentração: ${this.concentration} / 100`,
-                "Afinidade: Fogo",
-                "Função: Cavaleiro Mágico",
+    private restoreLastInspectionPanel(): void {
+        this.inspectionTitleText.setText(this.lastInspectionTitle);
+        this.inspectionBodyText.setText(this.lastInspectionBody);
+    }
+
+    private previewInspectTile(tile: ArenaTile): void {
+        const inspection = this.getTileInspection(tile);
+
+        this.updateInspectionPanel(inspection.title, inspection.body, false);
+    }
+
+    private persistInspectTile(tile: ArenaTile): void {
+        const inspection = this.getTileInspection(tile);
+
+        this.updateInspectionPanel(inspection.title, inspection.body, true);
+    }
+
+    private getTileInspection(tile: ArenaTile): {
+        title: string;
+        body: string;
+    } {
+        if (this.isPlayerOnTile(tile)) {
+            return {
+                title: this.playerName,
+                body: [
+                    `HP: ${this.playerCurrentHp} / ${this.playerMaxHp}`,
+                    `Escudo: ${this.playerShield} / ${IGNEOUS_SHIELD.shieldAbsorption ?? 0}`,
+                    `Concentração: ${this.concentration} / 100`,
+                    "Afinidade: Fogo",
+                    "Função: Cavaleiro Mágico",
+                ].join("\n"),
+            };
+        }
+
+        const enemy = this.getEnemyOnTile(tile);
+
+        if (enemy) {
+            return this.getEnemyInspection(enemy);
+        }
+
+        const titleByType: Record<string, string> = {
+            ground: "Terreno comum",
+            corrupted: "Terreno corrompido",
+            rock: "Rocha",
+        };
+
+        const movementText =
+            tile.type === "rock"
+                ? "Movimento: bloqueado"
+                : "Movimento: permitido";
+
+        const effects: string[] = [];
+
+        if (this.isBurningGroundTile(tile)) {
+            effects.push("Incendiado");
+        }
+
+        const effectText =
+            effects.length > 0
+                ? `Efeito: ${effects.join(", ")}`
+                : "Efeito: nenhum";
+
+        return {
+            title: titleByType[tile.type] ?? "Terreno",
+            body: [
+                `Linha: ${tile.row + 1} | Coluna: ${tile.column + 1}`,
+                movementText,
+                `Tipo: ${tile.type}`,
+                effectText,
             ].join("\n"),
-        );
+        };
     }
 
-    private inspectEnemy(enemy: EnemyUnit): void {
+    private getEnemyInspection(enemy: EnemyUnit): {
+        title: string;
+        body: string;
+    } {
         const lines = [
             `HP: ${enemy.currentHp} / ${enemy.maxHp}`,
             `Dano: ${enemy.damage}`,
@@ -405,45 +483,32 @@ export class BattleScene extends Scene {
             lines.push(`Queimadura: ${enemy.burningRounds} turno(s)`);
         }
 
-        this.updateInspectionPanel(enemy.name, lines.join("\n"));
+        return {
+            title: enemy.name,
+            body: lines.join("\n"),
+        };
+    }
+
+    private inspectPlayer(): void {
+        const tile = this.tiles.find((currentTile) =>
+            this.isPlayerOnTile(currentTile),
+        );
+
+        if (!tile) {
+            return;
+        }
+
+        this.persistInspectTile(tile);
+    }
+
+    private inspectEnemy(enemy: EnemyUnit): void {
+        const inspection = this.getEnemyInspection(enemy);
+
+        this.updateInspectionPanel(inspection.title, inspection.body, true);
     }
 
     private inspectTile(tile: ArenaTile): void {
-        if (this.isPlayerOnTile(tile)) {
-            this.inspectPlayer();
-            return;
-        }
-
-        const enemy = this.getEnemyOnTile(tile);
-
-        if (enemy) {
-            this.inspectEnemy(enemy);
-            return;
-        }
-
-        const titleByType: Record<string, string> = {
-            ground: "Terreno comum",
-            corrupted: "Terreno corrompido",
-            rock: "Rocha",
-        };
-
-        const movementText =
-            tile.type === "rock"
-                ? "Movimento: bloqueado"
-                : "Movimento: permitido";
-
-        const fireText = this.isBurningGroundTile(tile)
-            ? "\nEfeito: terreno incendiado"
-            : "";
-
-        this.updateInspectionPanel(
-            titleByType[tile.type] ?? "Terreno",
-            [
-                `Linha: ${tile.row + 1} | Coluna: ${tile.column + 1}`,
-                movementText,
-                `Tipo: ${tile.type}${fireText}`,
-            ].join("\n"),
-        );
+        this.persistInspectTile(tile);
     }
 
     private getEnemyOnTile(tile: ArenaTile): EnemyUnit | undefined {
@@ -495,6 +560,8 @@ export class BattleScene extends Scene {
                 };
 
                 tilePolygon.on("pointerover", () => {
+                    this.previewInspectTile(tile);
+
                     if (
                         this.flameInvocationTargetingMode &&
                         this.isFlameInvocationTargetTile(tile)
@@ -517,6 +584,8 @@ export class BattleScene extends Scene {
                 });
 
                 tilePolygon.on("pointerout", () => {
+                    this.restoreLastInspectionPanel();
+
                     if (this.flameInvocationTargetingMode) {
                         this.flameInvocationAreaPreviewTileKeys.clear();
                         this.refreshAllTiles();
